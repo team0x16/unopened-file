@@ -1332,10 +1332,13 @@ function render(){
   ctx.scale(zoom,zoom);
   ctx.translate(-W/2,-H/2);
 
-  // blit world canvas (все тайлы одним drawImage)
+  // blit world canvas — с субпиксельным сдвигом для плавности
   const offX = worldOC.width/2  - W/2;
   const offY = worldOC.height/2 - H/2;
-  ctx.drawImage(worldOC, -offX, -offY);
+  // дробная часть камеры (сколько пикселей между тайлами)
+  const fracX = (cam.wx - worldOC_camX) * TW/2 - (cam.wy - worldOC_camY) * TW/2;
+  const fracY = (cam.wx - worldOC_camX) * TH/2 + (cam.wy - worldOC_camY) * TH/2;
+  ctx.drawImage(worldOC, Math.round(-offX + fracX), Math.round(-offY + fracY));
 
   // поверх тайлов рисуем entities в правильном depth order
   const pd=P.wx+P.wy;
