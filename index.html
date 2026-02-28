@@ -11,13 +11,33 @@ canvas { display:block; cursor:none; }
 
 #overlay {
   position:fixed; inset:0; z-index:50;
-  background:#000; display:flex; flex-direction:column;
+  display:flex; flex-direction:column;
   align-items:center; justify-content:center; text-align:center;
-  padding:40px; gap:20px; cursor:pointer;
+  cursor:pointer; pointer-events:all;
 }
-#overlay-title { color:#c8b890; font-size:clamp(18px,4vw,36px); font-weight:300; letter-spacing:.4em; }
-#overlay-text  { color:#5a4a38; font-size:clamp(11px,1.6vw,14px); line-height:2; letter-spacing:.08em; max-width:420px; font-style:italic; }
-#overlay-hint  { color:#2a1e10; font-size:10px; letter-spacing:.3em; animation:pulse 2.5s ease-in-out infinite; margin-top:12px; }
+#ol-bg {
+  position:absolute; inset:0;
+  background:#fff;
+  transition: background 2.5s ease;
+}
+#ol-content {
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; align-items:center; gap:20px; padding:40px;
+  opacity:0; transform:translateY(8px);
+  transition: opacity 1.8s ease 1s, transform 1.8s ease 1s;
+}
+#overlay-title { color:#1a1210; font-size:clamp(18px,4vw,36px); font-weight:300; letter-spacing:.4em; }
+#overlay-text  { color:#4a3a28; font-size:clamp(11px,1.6vw,14px); line-height:2.2; letter-spacing:.08em; max-width:420px; font-style:italic; }
+#overlay-hint  { color:#2a1e10; font-size:10px; letter-spacing:.3em; animation:pulse 2.5s ease-in-out infinite; margin-top:8px; opacity:0; transition:opacity 1s ease 3s; }
+#overlay.loaded #ol-bg   { background:#000; }
+#overlay.loaded #ol-content { opacity:1; transform:translateY(0); }
+#overlay.loaded #overlay-hint { opacity:.5; }
+
+/* fullscreen fade transition */
+#scene-fade {
+  position:fixed; inset:0; z-index:55;
+  background:#fff; opacity:0; pointer-events:none;
+}
 
 #rotate-screen {
   position:fixed; inset:0; z-index:60; background:#000;
@@ -28,7 +48,7 @@ canvas { display:block; cursor:none; }
 @keyframes rotateAnim { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(-90deg)} }
 
 #ui { position:fixed; inset:0; pointer-events:none; z-index:20; }
-#counter { position:fixed; bottom:20px; right:20px; color:#2a1a0a; font-size:10px; letter-spacing:.2em; opacity:0; transition:opacity 1s; }
+#counter { position:fixed; top:20px; right:20px; color:#2a1a0a; font-size:10px; letter-spacing:.2em; opacity:0; transition:opacity 1s; }
 #frag-ui  { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   color:#c8b890; font-size:clamp(13px,1.8vw,16px); line-height:2; text-align:center;
   letter-spacing:.08em; opacity:0; max-width:480px; font-style:italic; pointer-events:none; }
@@ -77,7 +97,7 @@ canvas { display:block; cursor:none; }
 
 /* minimap */
 #minimap {
-  position:fixed; bottom:20px; left:20px; opacity:0; transition:opacity 1s;
+  position:fixed; top:50px; right:16px; opacity:0; transition:opacity 1s;
   pointer-events:none; z-index:20;
 }
 #mc { border:1px solid rgba(80,60,40,.35); display:block; }
@@ -127,12 +147,15 @@ canvas { display:block; cursor:none; }
 </div>
 
 <div id="overlay">
-  <div id="overlay-title">unopened file</div>
-  <div id="overlay-text">
-    a short walk through something that doesn't have a name yet.<br><br>
-    you are a shape. the world is heavy.<br>keep moving.
+  <div id="ol-bg"></div>
+  <div id="ol-content">
+    <div id="overlay-title">unopened file</div>
+    <div id="overlay-text">
+      a short walk through something that doesn't have a name yet.<br><br>
+      you are a shape. the world is heavy.<br>keep moving.
+    </div>
+    <div id="overlay-hint">[ tap to enter ]</div>
   </div>
-  <div id="overlay-hint">[ tap to enter fullscreen ]</div>
 </div>
 
 <div id="ending">
@@ -150,6 +173,7 @@ canvas { display:block; cursor:none; }
   <div id="pause-hint">[ esc to resume ]</div>
 </div>
 
+<div id="scene-fade"></div>
 <canvas id="c"></canvas>
 
 <div id="ui">
@@ -161,7 +185,7 @@ canvas { display:block; cursor:none; }
 </div>
 
 <div id="minimap">
-  <canvas id="mc" width="128" height="68"></canvas>
+  <canvas id="mc" width="160" height="120"></canvas>
   <div id="minimap-label">map</div>
 </div>
 
@@ -312,22 +336,83 @@ function addRect(x0,y0,x1,y1,type='floor'){
 function addVoid(x0,y0,x1,y1){ addRect(x0,y0,x1,y1,'void'); }
 function addRaised(x0,y0,x1,y1){ addRect(x0,y0,x1,y1,'raised'); }
 
-// ZONE 0
-addRect(-10,-8,18,8); addRect(-18,-5,-11,5); addRect(4,-16,9,-9);
-addRaised(-6,-4,-3,-2); addRaised(2,-2,5,0); addRaised(10,3,13,6); addRaised(-8,2,-5,4);
-addVoid(6,4,9,7); addVoid(-4,-8,-1,-6); addVoid(12,-5,15,-2);
-// ZONE 1
-addRect(19,-3,22,3); addRect(23,-12,46,12);
-addRaised(25,2,29,5); addRaised(32,-8,36,-5); addRaised(38,5,42,9); addRaised(29,-4,33,-1);
-addVoid(26,-11,30,-7); addVoid(35,6,39,10); addVoid(22,5,25,8); addVoid(41,-8,44,-4);
-// ZONE 2
-addRect(47,-4,49,4); addRect(50,-15,78,15);
-addRaised(52,0,57,4); addRaised(60,-12,65,-8); addRaised(68,7,73,11); addRaised(55,-7,60,-3); addRaised(70,-5,75,-1);
-addVoid(63,3,68,8); addVoid(53,-14,58,-9); addVoid(72,5,76,10);
-// ZONE 3
-addRect(79,-5,81,5); addRect(82,-18,112,18);
-addRaised(84,-14,89,-10); addRaised(92,6,98,11); addRaised(100,-10,106,-5); addRaised(107,3,112,8); addRaised(86,2,91,7);
-addVoid(95,-16,100,-10); addVoid(84,9,90,14); addVoid(103,6,108,11);
+// ═══ МИРОВАЯ КАРТА — всё связно ═══
+// Правило: каждый блок перекрывается с соседним минимум на 1 тайл
+
+// ── ЦЕНТР
+addRect(-12,-12, 12, 12);
+addRaised(-8,-6,-4,-3); addRaised(4,4,8,8); addRaised(-4,6,0,9); addRaised(5,-9,9,-5);
+addVoid(7,8,10,11); addVoid(-9,-11,-6,-9); addVoid(8,-4,11,-1);
+
+// ── ВОСТОК: зал 1 (соединён с центром — нет зазора)
+addRect(12,-6, 28, 6);        // перекрывает центр на x=12
+addRaised(15,2,19,5); addRaised(21,-5,25,-2);
+addVoid(23,3,27,6); addVoid(14,-6,18,-3);
+
+// восток: коридор → зал 2
+addRect(28,-10, 55, 10);      // перекрывает зал1 на x=28
+addRaised(30,4,35,8); addRaised(40,-8,45,-4); addRaised(48,2,53,7);
+addVoid(36,5,41,9); addVoid(43,-9,48,-5);
+
+// восток: зал 3
+addRect(55,-15, 90, 15);      // перекрывает зал2 на x=55
+addRaised(58,-12,64,-8); addRaised(66,7,72,12); addRaised(75,-5,81,1); addRaised(83,6,88,11);
+addVoid(64,8,70,13); addVoid(73,-13,79,-8); addVoid(85,-10,89,-5);
+
+// восток: финальный зал
+addRect(90,-20,125, 20);      // перекрывает зал3 на x=90
+addRaised(93,-17,99,-12); addRaised(101,8,108,14); addRaised(110,-8,116,-3); addRaised(118,4,123,10);
+addVoid(103,-18,109,-12); addVoid(95,10,102,16); addVoid(113,6,118,12);
+
+// ── СЕВЕР: коридор → зал (перекрыт с центром на y=-12)
+addRect(-8,-12, 8,-28);       // y начинается с -12 = граница центра
+addRaised(-6,-16,-2,-13); addRaised(2,-22,6,-18); addRaised(-4,-26,-1,-23);
+addVoid(4,-20,7,-16); addVoid(-7,-27,-3,-23);
+
+// север: глубокий зал
+addRect(-12,-28,12,-50);      // перекрывает северный коридор на y=-28
+addRaised(-9,-32,-5,-29); addRaised(3,-40,7,-36); addRaised(-5,-47,-2,-44); addRaised(6,-46,10,-43);
+addVoid(-2,-38,2,-34); addVoid(-10,-47,-6,-43); addVoid(4,-50,8,-46);
+
+// ── ЮГ: коридор → зал (перекрыт с центром на y=12)
+addRect(-8, 12, 8, 28);
+addRaised(-6,13,-2,16); addRaised(2,20,6,24); addRaised(-4,25,-1,27);
+addVoid(4,16,7,20); addVoid(-7,24,-3,27);
+
+// юг: глубокий зал
+addRect(-12, 28,12, 50);
+addRaised(-9,30,-5,33); addRaised(3,38,7,42); addRaised(-5,45,-2,47); addRaised(6,44,10,47);
+addVoid(-2,35,2,39); addVoid(-10,44,-6,47); addVoid(4,47,8,50);
+
+// ── ЗАПАД: зал (перекрыт с центром на x=-12)
+addRect(-28,-6,-12, 6);
+addRaised(-26,1,-22,4); addRaised(-20,-5,-16,-2);
+addVoid(-24,-6,-20,-3); addVoid(-15,3,-12,5);
+
+// запад: глубокий зал
+addRect(-55,-12,-28,12);      // перекрывает западный зал на x=-28
+addRaised(-52,-9,-47,-5); addRaised(-44,5,-39,9); addRaised(-36,-4,-32,-1); addRaised(-50,6,-46,9);
+addVoid(-48,-11,-43,-7); addVoid(-41,7,-36,11); addVoid(-34,-8,-30,-4);
+
+// ── СЕВЕРО-ВОСТОК (от x=12,y=-12 — угол центра)
+addRect(12,-12, 30,-30);      // перекрывает центр на x=12,y=-12
+addRaised(15,-16,19,-13); addRaised(22,-24,26,-20); addRaised(27,-29,30,-26);
+addVoid(19,-22,23,-18); addVoid(26,-30,29,-27);
+
+// ── ЮГО-ВОСТОК
+addRect(12, 12, 30, 30);
+addRaised(15,13,19,16); addRaised(22,21,26,25); addRaised(27,27,30,29);
+addVoid(19,18,23,22); addVoid(26,26,29,29);
+
+// ── СЕВЕРО-ЗАПАД
+addRect(-30,-12,-12,-30);
+addRaised(-29,-16,-25,-13); addRaised(-24,-24,-20,-21); addRaised(-18,-28,-15,-26);
+addVoid(-23,-22,-19,-19); addVoid(-17,-29,-14,-27);
+
+// ── ЮГО-ЗАПАД
+addRect(-30, 12,-12, 30);
+addRaised(-29,13,-25,16); addRaised(-24,21,-20,24); addRaised(-18,27,-15,29);
+addVoid(-23,18,-19,21); addVoid(-17,26,-14,29);
 
 let sortedTiles=[...tileMap.entries()]
   .map(([k,tp])=>{ const[x,y]=k.split(',').map(Number); return{x,y,type:tp}; })
@@ -337,21 +422,26 @@ let sortedTiles=[...tileMap.entries()]
 // FRAGMENTS
 // ═══════════════════════════════════════════════════════════════
 const FRAGS=[
-  {wx:-14,wy: 0,text:"you edit.",           sub:"you compress."},
-  {wx: -8,wy: 3,text:"you translate.",      sub:"yourself into something more receivable."},
-  {wx:  6,wy:-12,text:"the calibrated one.",sub:"the one that knows when to be funny."},
-  {wx: 12,wy: 5,text:"the original file",   sub:"sits unopened."},
-  {wx: 26,wy: 0,text:"people like you.",    sub:"people trust you."},
-  {wx: 33,wy: 4,text:"a good friend.",      sub:"that's what they'd call you."},
-  {wx: 38,wy:-6,text:"but the original",    sub:"they never received it."},
-  {wx: 43,wy: 8,text:"getting heavier",     sub:"with every conversation that almost touched it."},
-  {wx: 54,wy: 2,text:"you're not waiting",  sub:"for someone to fix you."},
-  {wx: 62,wy:-9,text:"you're waiting",      sub:"for someone who makes compression feel unnecessary."},
-  {wx: 69,wy: 9,text:"enough silence.",     sub:"someone who creates it."},
-  {wx: 76,wy:-3,text:"you don't know",      sub:"if that person exists."},
-  {wx: 86,wy:-12,text:"you don't know",     sub:"if you'd even recognize them."},
-  {wx: 95,wy: 8,text:"but you keep the file.",sub:"intact."},
-  {wx:108,wy:-8,text:"just in case.",       sub:"remaining days · 44"},
+  // центр
+  {wx: -7,wy: 0, text:"you edit.",           sub:"you compress."},
+  {wx:  5,wy: 8, text:"you translate.",      sub:"yourself into something more receivable."},
+  // восток
+  {wx: 20,wy: 6, text:"the calibrated one.", sub:"the one that knows when to be funny."},
+  {wx: 29,wy:-8, text:"the original file",   sub:"sits unopened."},
+  {wx: 38,wy:10, text:"people like you.",    sub:"people trust you."},
+  {wx: 55,wy:-4, text:"a good friend.",      sub:"that's what they'd call you."},
+  {wx: 68,wy:11, text:"but the original",    sub:"they never received it."},
+  {wx: 92,wy:-10,text:"getting heavier",     sub:"with every conversation that almost touched it."},
+  {wx:110,wy: 6, text:"you're not waiting",  sub:"for someone to fix you."},
+  // север
+  {wx: -6,wy:-22,text:"you're waiting",      sub:"for someone who makes compression feel unnecessary."},
+  {wx:  4,wy:-48,text:"enough silence.",     sub:"someone who creates it."},
+  // юг
+  {wx: -5,wy: 24,text:"you don't know",      sub:"if that person exists."},
+  {wx:  4,wy: 48,text:"you don't know",      sub:"if you'd even recognize them."},
+  // запад
+  {wx:-28,wy: 5, text:"but you keep the file.", sub:"intact."},
+  {wx:-52,wy:-4, text:"just in case.",       sub:"remaining days · 44"},
 ].map(f=>({...f,collected:false,phase:Math.random()*Math.PI*2}));
 
 const dotsEl=document.getElementById('dots');
@@ -579,19 +669,39 @@ function drawBoss(){
 // ENEMIES
 // ═══════════════════════════════════════════════════════════════
 const ENEMIES=[
-  {wx:-5,wy: 3,speed:0.9,hp:3,maxHp:3,phase:0},
-  {wx: 8,wy:-5,speed:0.8,hp:3,maxHp:3,phase:1},
-  {wx:14,wy: 6,speed:1.0,hp:3,maxHp:3,phase:2},
-  {wx:27,wy: 0,speed:1.1,hp:4,maxHp:4,phase:0.5},
-  {wx:33,wy:-6,speed:1.0,hp:4,maxHp:4,phase:1.2},
-  {wx:39,wy: 8,speed:0.9,hp:4,maxHp:4,phase:2.1},
-  {wx:43,wy:-2,speed:1.2,hp:4,maxHp:4,phase:0.8},
-  {wx:55,wy: 3,speed:1.3,hp:5,maxHp:5,phase:0.3},
-  {wx:63,wy:-6,speed:1.2,hp:5,maxHp:5,phase:1.5},
-  {wx:70,wy: 8,speed:1.1,hp:5,maxHp:5,phase:2.5},
-  {wx:74,wy:-4,speed:1.4,hp:5,maxHp:5,phase:0.7},
-  {wx:88,wy: 5,speed:1.5,hp:6,maxHp:6,phase:1.0},
-  {wx:96,wy:-8,speed:1.4,hp:6,maxHp:6,phase:1.8},
+  // центр
+  {wx: -7,wy: 5, speed:0.9,hp:3,maxHp:3,phase:0.0},
+  {wx:  8,wy:-8, speed:0.8,hp:3,maxHp:3,phase:1.1},
+  {wx: -5,wy:-8, speed:1.0,hp:3,maxHp:3,phase:2.2},
+  // восток 1
+  {wx: 22,wy: 8, speed:1.0,hp:4,maxHp:4,phase:0.5},
+  {wx: 28,wy:-8, speed:1.1,hp:4,maxHp:4,phase:1.3},
+  {wx: 35,wy: 3, speed:1.0,hp:4,maxHp:4,phase:0.7},
+  // восток 2
+  {wx: 54,wy:-5, speed:1.2,hp:5,maxHp:5,phase:1.8},
+  {wx: 62,wy:10, speed:1.1,hp:5,maxHp:5,phase:0.4},
+  {wx: 70,wy:-3, speed:1.3,hp:5,maxHp:5,phase:2.1},
+  // восток 3
+  {wx: 90,wy:10, speed:1.4,hp:6,maxHp:6,phase:0.9},
+  {wx: 98,wy:-12,speed:1.5,hp:6,maxHp:6,phase:1.5},
+  {wx:110,wy: 4, speed:1.4,hp:6,maxHp:6,phase:2.3},
+  // север
+  {wx: -5,wy:-20,speed:1.1,hp:4,maxHp:4,phase:0.6},
+  {wx:  4,wy:-32,speed:1.2,hp:5,maxHp:5,phase:1.4},
+  {wx: -3,wy:-50,speed:1.3,hp:5,maxHp:5,phase:2.0},
+  // юг
+  {wx:  3,wy: 22,speed:1.1,hp:4,maxHp:4,phase:0.3},
+  {wx: -5,wy: 32,speed:1.2,hp:5,maxHp:5,phase:1.7},
+  {wx:  4,wy: 50,speed:1.3,hp:5,maxHp:5,phase:0.8},
+  // запад
+  {wx:-20,wy:-5, speed:1.1,hp:4,maxHp:4,phase:1.2},
+  {wx:-30,wy: 8, speed:1.2,hp:5,maxHp:5,phase:0.5},
+  {wx:-48,wy:-3, speed:1.3,hp:5,maxHp:5,phase:1.9},
+  // диагонали
+  {wx: 20,wy:-20,speed:1.1,hp:4,maxHp:4,phase:0.2},
+  {wx:-20,wy: 20,speed:1.1,hp:4,maxHp:4,phase:1.6},
+  {wx: 20,wy: 22,speed:1.1,hp:4,maxHp:4,phase:2.4},
+  {wx:-20,wy:-20,speed:1.1,hp:4,maxHp:4,phase:0.9},
 ].map(e=>({...e,alive:true,hitTimer:0}));
 
 // ═══════════════════════════════════════════════════════════════
@@ -928,8 +1038,8 @@ function updateFragUI(){
 // MINIMAP
 // ═══════════════════════════════════════════════════════════════
 const mc=document.getElementById('mc'), mctx=mc.getContext('2d');
-const MM_W=128, MM_H=68;
-const WX0=-18, WX1=112, WY0=-18, WY1=18;
+const MM_W=160, MM_H=120;
+const WX0=-60, WX1=122, WY0=-62, WY1=62;
 
 function drawMinimap(){
   mctx.clearRect(0,0,MM_W,MM_H);
@@ -1141,7 +1251,18 @@ function render(){
   const aliveEnemies=ENEMIES.filter(e=>e.alive).sort((a,b)=>(a.wx+a.wy)-(b.wx+b.wy));
   let ei=0;
 
+  // frustum culling — сколько тайлов влезает на экран с запасом
+  const CULL_PAD = 4; // запас в тайлах
+  const visW = (W / zoom / TW) + CULL_PAD;
+  const visH = (H / zoom / TH) + CULL_PAD;
+
   for(const tile of sortedTiles){
+    // изо-пространство: тайл виден если его экранная позиция в пределах W/H
+    const rdx = tile.x - cam.wx, rdy = tile.y - cam.wy;
+    const screenX = (rdx - rdy);   // в единицах TW/2
+    const screenY = (rdx + rdy);   // в единицах TH/2
+    if(Math.abs(screenX) > visW * 2 || Math.abs(screenY) > visH * 4) continue;
+
     const depth=tile.x+tile.y;
     while(ei<aliveEnemies.length&&(aliveEnemies[ei].wx+aliveEnemies[ei].wy)<=depth) drawEnemy(aliveEnemies[ei++]);
     if(!drawnB&&depth>bossDepth){drawBoss();drawnB=true;}
@@ -1202,627 +1323,58 @@ requestAnimationFrame(loop);
 // ═══════════════════════════════════════════════════════════════
 // START
 // ═══════════════════════════════════════════════════════════════
+// запускаем анимацию появления overlay сразу
+setTimeout(() => {
+  document.getElementById('overlay').classList.add('loaded');
+}, 80);
+
+function showUI(){
+  document.getElementById('counter').style.opacity='.3';
+  document.getElementById('dots').style.opacity='1';
+  document.getElementById('hpbar').style.opacity='1';
+  document.getElementById('minimap').style.opacity='.75';
+  document.getElementById('dash-ui').style.opacity='1';
+  document.getElementById('zone-ui').style.opacity='.7';
+}
+
 function startGame(){
+  if(started) return;
   getAudio();
   requestFS();
-  document.getElementById('overlay').style.display='none';
-  started=true;
-  setTimeout(()=>{
-    document.getElementById('counter').style.opacity='.3';
-    document.getElementById('dots').style.opacity='1';
-    document.getElementById('hpbar').style.opacity='1';
-    document.getElementById('minimap').style.opacity='.75';
-    document.getElementById('dash-ui').style.opacity='1';
-    document.getElementById('zone-ui').style.opacity='.7';
-  },2000);
+
+  const fade = document.getElementById('scene-fade');
+  const overlay = document.getElementById('overlay');
+
+  // шаг 1: content исчезает вверх
+  const content = document.getElementById('ol-content');
+  content.style.transition = 'opacity .5s ease, transform .5s ease';
+  content.style.opacity = '0';
+  content.style.transform = 'translateY(-12px)';
+
+  // шаг 2: через 500мс — белая вспышка
+  setTimeout(() => {
+    fade.style.background = '#fff';
+    fade.style.transition = 'opacity .3s ease';
+    fade.style.opacity = '1';
+    fade.style.pointerEvents = 'all';
+
+    setTimeout(() => {
+      // шаг 3: убираем overlay, начинаем игру
+      overlay.style.display = 'none';
+      started = true;
+
+      // шаг 4: из белого плавно в игру
+      fade.style.transition = 'opacity .8s ease';
+      fade.style.opacity = '0';
+      fade.style.pointerEvents = 'none';
+
+      // шаг 5: ui появляется
+      setTimeout(showUI, 700);
+    }, 300);
+  }, 450);
 }
 document.getElementById('overlay').addEventListener('click',startGame);
 document.getElementById('overlay').addEventListener('touchend',e=>{e.preventDefault();startGame();},{passive:false});
 </script>
 </body>
 </html>
-═══════
-// PLAYER
-// ═══════════════════════════════════════════════════════════════
-const P = {
-  wx:0, wy:0, speed:3.2, trail:[],
-  bob:0, hp:5, maxHp:5, invTimer:0,
-  attacking:false, atkTimer:0, atkDir:{x:1,y:0},
-  dead:false, deathTimer:0,
-};
-
-// hp hearts UI
-const hpBar = document.getElementById('hpbar');
-for(let i=0;i<P.maxHp;i++){
-  const h=document.createElement('div'); h.className='heart on'; h.id=`hp${i}`;
-  hpBar.appendChild(h);
-}
-function updateHpUI(){
-  for(let i=0;i<P.maxHp;i++)
-    document.getElementById(`hp${i}`).className='heart'+(i<P.hp?' on':'');
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ENEMIES
-// ═══════════════════════════════════════════════════════════════
-const ENEMIES = [
-  // zone 0
-  {wx:-5,wy:3,  speed:0.9, hp:3, maxHp:3, phase:0},
-  {wx: 8,wy:-5, speed:0.8, hp:3, maxHp:3, phase:1},
-  {wx:14,wy: 6, speed:1.0, hp:3, maxHp:3, phase:2},
-  // zone 1
-  {wx:27,wy: 0, speed:1.1, hp:4, maxHp:4, phase:0.5},
-  {wx:33,wy:-6, speed:1.0, hp:4, maxHp:4, phase:1.2},
-  {wx:39,wy: 8, speed:0.9, hp:4, maxHp:4, phase:2.1},
-  {wx:43,wy:-2, speed:1.2, hp:4, maxHp:4, phase:0.8},
-  // zone 2
-  {wx:55,wy: 3, speed:1.3, hp:5, maxHp:5, phase:0.3},
-  {wx:63,wy:-6, speed:1.2, hp:5, maxHp:5, phase:1.5},
-  {wx:70,wy: 8, speed:1.1, hp:5, maxHp:5, phase:2.5},
-  {wx:74,wy:-4, speed:1.4, hp:5, maxHp:5, phase:0.7},
-  // zone 3
-  {wx:88,wy: 5, speed:1.5, hp:6, maxHp:6, phase:1.0},
-  {wx:96,wy:-8, speed:1.4, hp:6, maxHp:6, phase:1.8},
-  {wx:103,wy:6, speed:1.6, hp:6, maxHp:6, phase:0.4},
-  {wx:109,wy:-6,speed:1.5, hp:6, maxHp:6, phase:2.2},
-].map(e=>({...e, alive:true, hitTimer:0, vx:0, vy:0, trail:[]}));
-
-// ═══════════════════════════════════════════════════════════════
-// PARTICLES
-// ═══════════════════════════════════════════════════════════════
-let particles = [];
-class Pt {
-  constructor(sx,sy,vx,vy,r,a,col,life){
-    Object.assign(this,{sx,sy,vx,vy,r,a,maxA:a,col,life,maxLife:life});
-  }
-  step(){this.sx+=this.vx;this.sy+=this.vy;this.vy+=.04;this.life--;this.a=this.maxA*(this.life/this.maxLife);return this.life>0;}
-  draw(){ctx.save();ctx.globalAlpha=this.a;ctx.fillStyle=this.col;ctx.beginPath();ctx.arc(this.sx,this.sy,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}
-}
-
-function burst(sx,sy,col,n=16,spd=2.5){
-  for(let i=0;i<n;i++){
-    const a=Math.random()*Math.PI*2, s=Math.random()*spd+.5;
-    particles.push(new Pt(sx,sy,Math.cos(a)*s,Math.sin(a)*s-.8,Math.random()*2.5+.4,.8,col,30+Math.random()*25));
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// JOYSTICK
-// ═══════════════════════════════════════════════════════════════
-const joy = {x:0,y:0,active:false};
-const joyZone = document.getElementById('joy-zone');
-const joyKnob = document.getElementById('joy-knob');
-const atkBtn  = document.getElementById('atk-btn');
-
-if(isTouch()){
-  joyZone.style.display='block';
-  atkBtn.style.display='flex';
-  const R=44;
-  function joyMove(e){
-    const t=e.touches[0], rect=joyZone.getBoundingClientRect();
-    let dx=t.clientX-(rect.left+rect.width/2), dy=t.clientY-(rect.top+rect.height/2);
-    const d=Math.sqrt(dx*dx+dy*dy);
-    if(d>R){dx=dx/d*R;dy=dy/d*R;}
-    joyKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-    joy.x=dx/R; joy.y=dy/R; joy.active=true;
-  }
-  joyZone.addEventListener('touchstart',e=>{e.preventDefault();joyMove(e);},{passive:false});
-  joyZone.addEventListener('touchmove', e=>{e.preventDefault();joyMove(e);},{passive:false});
-  joyZone.addEventListener('touchend',  e=>{e.preventDefault();joy.x=0;joy.y=0;joy.active=false;joyKnob.style.transform='translate(-50%,-50%)';},{passive:false});
-  atkBtn.addEventListener('touchstart',e=>{e.preventDefault();atkBtn.classList.add('active');tryAttack();},{passive:false});
-  atkBtn.addEventListener('touchend',  e=>{e.preventDefault();atkBtn.classList.remove('active');},{passive:false});
-}
-
-// ═══════════════════════════════════════════════════════════════
-// ATTACK
-// ═══════════════════════════════════════════════════════════════
-function tryAttack(){
-  if(P.attacking||P.dead) return;
-  P.attacking=true; P.atkTimer=14;
-  // swing particles
-  const {sx,sy}=toScreen(P.wx-cam.wx,P.wy-cam.wy);
-  burst(sx+P.atkDir.x*24,sy-LIFT+P.atkDir.y*12,'#c8a060',8,1.8);
-}
-
-function updateAttack(){
-  if(!P.attacking) return;
-  P.atkTimer--;
-  if(P.atkTimer<=0){ P.attacking=false; return; }
-  // check hit on enemies at peak (frame 7)
-  if(P.atkTimer===7){
-    const reach=2.0;
-    ENEMIES.forEach(e=>{
-      if(!e.alive) return;
-      const dx=e.wx-P.wx, dy=e.wy-P.wy;
-      if(Math.sqrt(dx*dx+dy*dy)<reach){
-        e.hp--;
-        e.hitTimer=12;
-        const {sx,sy}=toScreen(e.wx-cam.wx,e.wy-cam.wy);
-        burst(sx,sy-LIFT,'#c06040',10,2);
-        if(e.hp<=0){
-          e.alive=false;
-          burst(sx,sy-LIFT,'#402030',20,3);
-        }
-      }
-    });
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// WALKABLE
-// ═══════════════════════════════════════════════════════════════
-function walkable(wx,wy){
-  const M=0.3;
-  for(const [cx,cy] of [[wx,wy],[wx+M,wy],[wx-M,wy],[wx,wy+M],[wx,wy-M]]){
-    const t=tileMap.get(`${Math.round(cx)},${Math.round(cy)}`);
-    if(!t||t==='void') return false;
-  }
-  return true;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CAMERA
-// ═══════════════════════════════════════════════════════════════
-const cam = {wx:0, wy:0};
-
-// ═══════════════════════════════════════════════════════════════
-// TILE DRAW
-// ═══════════════════════════════════════════════════════════════
-// Pre-generate grass per tile (deterministic)
-const grassCache = new Map();
-function getGrass(x,y){
-  const k=`${x},${y}`;
-  if(grassCache.has(k)) return grassCache.get(k);
-  const seed=((x*7391+y*3449)^(x*y*613))>>>0;
-  const rng=n=>(((seed*(n+1)*1664525+1013904223)>>>0)/0xffffffff);
-  const blades=[];
-  if(rng(0)<0.5){
-    const n=Math.floor(rng(1)*4)+1;
-    for(let b=0;b<n;b++){
-      let u=(rng(b*6+2)-.5)*.75, v=(rng(b*6+3)-.5)*.6;
-      const bx=u*(TW/2)+v*(TW/2);
-      const by=v*(TH/2)-u*(TH/2);
-      const h=rng(b*6+4)*5+3;
-      const lean=(rng(b*6+5)-.5)*6;
-      const g=Math.floor(rng(b*6+10)*40)+20;
-      blades.push({bx,by,h,lean,
-        col:`rgb(${6+Math.floor(g*.2)},${g},${Math.floor(g*.7)+15})`,
-        a:0.4+rng(b*6+11)*.35, twin:rng(b*6+12)>.5});
-    }
-  }
-  grassCache.set(k,blades);
-  return blades;
-}
-
-function drawTile(x,y,type){
-  if(type==='void'){
-    const{sx,sy}=toScreen(x-cam.wx,y-cam.wy);
-    const hw=TW/2,hh=TH/2;
-    ctx.fillStyle='#050310';
-    ctx.beginPath();ctx.moveTo(sx,sy-hh);ctx.lineTo(sx+hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx-hw,sy);ctx.closePath();ctx.fill();
-    const ag=ctx.createRadialGradient(sx,sy,0,sx,sy,hw*.8);
-    ag.addColorStop(0,'rgba(40,5,80,.2)');ag.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=ag;ctx.beginPath();ctx.moveTo(sx,sy-hh);ctx.lineTo(sx+hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx-hw,sy);ctx.closePath();ctx.fill();
-    return;
-  }
-
-  const{sx,sy}=toScreen(x-cam.wx,y-cam.wy);
-  const hw=TW/2, hh=TH/2;
-  const isR=(type==='raised');
-
-  // left wall
-  ctx.fillStyle=isR?'#1a1230':'#110d1c';
-  ctx.beginPath();ctx.moveTo(sx-hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx,sy+hh+WALL_H);ctx.lineTo(sx-hw,sy+WALL_H);ctx.closePath();ctx.fill();
-  // right wall
-  ctx.fillStyle=isR?'#130e24':'#0d0a16';
-  ctx.beginPath();ctx.moveTo(sx+hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx,sy+hh+WALL_H);ctx.lineTo(sx+hw,sy+WALL_H);ctx.closePath();ctx.fill();
-
-  // top face with ground texture
-  const tg=ctx.createLinearGradient(sx,sy-hh,sx+2,sy+hh+2);
-  if(isR){ tg.addColorStop(0,'#2c2242'); tg.addColorStop(1,'#1e1832'); }
-  else   { tg.addColorStop(0,'#1e1830'); tg.addColorStop(1,'#150f22'); }
-  ctx.fillStyle=tg;
-  ctx.beginPath();ctx.moveTo(sx,sy-hh);ctx.lineTo(sx+hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx-hw,sy);ctx.closePath();ctx.fill();
-
-  // subtle stone cracks
-  ctx.save();ctx.globalAlpha=.08;
-  ctx.strokeStyle='#ffffff';ctx.lineWidth=.5;
-  const sr=((x*31+y*17)%12)/12;
-  if(sr<.4){
-    ctx.beginPath();ctx.moveTo(sx-hw*.3,sy-hh*.2);ctx.lineTo(sx+hw*.1,sy+hh*.3);ctx.stroke();
-  }
-  ctx.restore();
-
-  // rim light
-  ctx.strokeStyle=isR?'rgba(120,85,200,.35)':'rgba(70,50,110,.22)';
-  ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(sx,sy-hh);ctx.lineTo(sx+hw,sy);ctx.lineTo(sx,sy+hh);ctx.lineTo(sx-hw,sy);ctx.closePath();ctx.stroke();
-
-  // GRASS — drawn on top face
-  const blades=getGrass(x,y);
-  blades.forEach(b=>{
-    ctx.save();ctx.globalAlpha=b.a;
-    ctx.strokeStyle=b.col;ctx.lineWidth=1;
-    ctx.beginPath();
-    ctx.moveTo(sx+b.bx, sy+b.by);
-    ctx.quadraticCurveTo(sx+b.bx+b.lean*.5, sy+b.by-b.h*.6, sx+b.bx+b.lean, sy+b.by-b.h);
-    ctx.stroke();
-    if(b.twin){
-      ctx.globalAlpha*=.5;
-      ctx.beginPath();ctx.moveTo(sx+b.bx+1.5,sy+b.by);ctx.lineTo(sx+b.bx+b.lean*.4+1,sy+b.by-b.h*.7);ctx.stroke();
-    }
-    ctx.restore();
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DRAW CHARACTER
-// ═══════════════════════════════════════════════════════════════
-function drawChar(sx,sy,alpha=1,scale=1,t2=0,attacking=false,atkTimer=0,atkDir={x:1,y:0},hitFlash=false){
-  const h=46*scale, w=22*scale;
-  ctx.save(); ctx.globalAlpha=alpha;
-
-  if(hitFlash){
-    ctx.shadowColor='#ff4040'; ctx.shadowBlur=12;
-  }
-
-  // body glow
-  const gl=ctx.createRadialGradient(sx,sy,0,sx,sy,h);
-  gl.addColorStop(0,'rgba(80,60,130,.1)');gl.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=gl;ctx.beginPath();ctx.arc(sx,sy,h,0,Math.PI*2);ctx.fill();
-
-  // cloak
-  ctx.fillStyle=hitFlash?'#3a1020':'#10101a';
-  ctx.beginPath();
-  ctx.moveTo(sx-w*.5,sy);
-  ctx.bezierCurveTo(sx-w*.75,sy+h*.3,sx-w*.6,sy+h*.55,sx-w*.12,sy+h*.5);
-  ctx.lineTo(sx+w*.12,sy+h*.5);
-  ctx.bezierCurveTo(sx+w*.6,sy+h*.55,sx+w*.75,sy+h*.3,sx+w*.5,sy);
-  ctx.bezierCurveTo(sx+w*.38,sy-h*.38,sx+w*.18,sy-h*.5,sx,sy-h*.5);
-  ctx.bezierCurveTo(sx-w*.18,sy-h*.5,sx-w*.38,sy-h*.38,sx-w*.5,sy);
-  ctx.fill();
-
-  // horns
-  ctx.fillStyle='#0a0814';
-  ctx.beginPath();ctx.moveTo(sx-w*.2,sy-h*.38);ctx.lineTo(sx-w*.32,sy-h*.66);ctx.lineTo(sx-w*.06,sy-h*.34);ctx.fill();
-  ctx.beginPath();ctx.moveTo(sx+w*.2,sy-h*.38);ctx.lineTo(sx+w*.32,sy-h*.66);ctx.lineTo(sx+w*.06,sy-h*.34);ctx.fill();
-
-  // eye
-  const shimmer=t2?(Math.sin(t2*.003)*.35+.65):1;
-  ctx.fillStyle=`rgba(180,160,255,${.9*shimmer})`;
-  ctx.beginPath();ctx.arc(sx,sy-h*.2,2.6*scale,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.6)';
-  ctx.beginPath();ctx.arc(sx,sy-h*.2,1*scale,0,Math.PI*2);ctx.fill();
-
-  // SWORD
-  if(attacking){
-    const prog=1-(atkTimer/14); // 0→1
-    const swingAngle=-Math.PI*.6+prog*Math.PI*1.1;
-    const sx2=sx+Math.cos(swingAngle)*28*scale;
-    const sy2=sy-h*.1+Math.sin(swingAngle)*20*scale;
-    ctx.save();
-    ctx.translate(sx2,sy2);
-    ctx.rotate(swingAngle+Math.PI*.25);
-    // blade
-    const sg=ctx.createLinearGradient(0,-28*scale,0,6*scale);
-    sg.addColorStop(0,'rgba(220,200,160,0.9)');sg.addColorStop(1,'rgba(100,80,60,0.4)');
-    ctx.fillStyle=sg;
-    ctx.fillRect(-1.5*scale,-28*scale,3*scale,34*scale);
-    // guard
-    ctx.fillStyle='rgba(160,130,80,0.7)';
-    ctx.fillRect(-6*scale,2*scale,12*scale,3*scale);
-    // tip glow
-    ctx.save();ctx.globalAlpha=.5+prog*.4;
-    const tg2=ctx.createRadialGradient(0,-28*scale,0,0,-28*scale,8);
-    tg2.addColorStop(0,'rgba(255,220,120,.6)');tg2.addColorStop(1,'rgba(255,200,80,0)');
-    ctx.fillStyle=tg2;ctx.beginPath();ctx.arc(0,-28*scale,8,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-    ctx.restore();
-  } else {
-    // sword at rest (on back)
-    ctx.save();
-    ctx.translate(sx+w*.3,sy-h*.05);
-    ctx.rotate(.4);
-    ctx.fillStyle='rgba(140,120,70,0.35)';
-    ctx.fillRect(-1,-(h*.55),2,h*.7);
-    ctx.restore();
-  }
-
-  ctx.restore();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DRAW ENEMY
-// ═══════════════════════════════════════════════════════════════
-function drawEnemy(e){
-  if(!e.alive) return;
-  const{sx,sy}=toScreen(e.wx-cam.wx,e.wy-cam.wy);
-  const py=sy-LIFT;
-  const flash=e.hitTimer>0;
-
-  // shadow
-  ctx.save();ctx.globalAlpha=.2;
-  const sg=ctx.createRadialGradient(sx,sy-2,0,sx,sy-2,18);
-  sg.addColorStop(0,'rgba(0,0,0,.7)');sg.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg;ctx.ellipse(sx,sy-WALL_H*.4,18,7,0,0,Math.PI*2);ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  if(flash){ctx.shadowColor='#ff2020';ctx.shadowBlur=10;}
-  ctx.globalAlpha=1;
-
-  // body — hunched blob shape
-  const col=flash?'#5a0a18':'#1a0a18';
-  ctx.fillStyle=col;
-  ctx.beginPath();
-  ctx.ellipse(sx,py-4,12,18,0,0,Math.PI*2);
-  ctx.fill();
-
-  // red eyes
-  ctx.fillStyle=flash?'#ff8080':'#c03040';
-  ctx.beginPath();ctx.arc(sx-5,py-10,3,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(sx+5,py-10,3,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(255,100,100,.6)';
-  ctx.beginPath();ctx.arc(sx-5,py-10,1.2,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(sx+5,py-10,1.2,0,Math.PI*2);ctx.fill();
-
-  // hp bar above
-  const barW=28, barH=3;
-  ctx.fillStyle='#2a0a10';
-  ctx.fillRect(sx-barW/2,py-26,barW,barH);
-  ctx.fillStyle='#c03050';
-  ctx.fillRect(sx-barW/2,py-26,barW*(e.hp/e.maxHp),barH);
-
-  ctx.restore();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// FRAGMENTS
-// ═══════════════════════════════════════════════════════════════
-let fragTimer=0, fragData=null;
-const fragEl=document.getElementById('frag-ui');
-
-function drawFragments(t2){
-  FRAGS.forEach(f=>{
-    if(f.collected) return;
-    f.phase+=.02;
-    const{sx,sy}=toScreen(f.wx-cam.wx,f.wy-cam.wy);
-    const fy=sy-LIFT-16;
-    const p=Math.sin(f.phase)*.25+.75;
-    const g=ctx.createRadialGradient(sx,fy,0,sx,fy,24);
-    g.addColorStop(0,`rgba(210,185,100,${.25*p})`);g.addColorStop(1,'rgba(210,185,100,0)');
-    ctx.fillStyle=g;ctx.beginPath();ctx.arc(sx,fy,24,0,Math.PI*2);ctx.fill();
-    ctx.save();ctx.globalAlpha=.5*p;ctx.strokeStyle='#c8b060';ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(sx,fy-8);ctx.lineTo(sx+6,fy);ctx.lineTo(sx,fy+8);ctx.lineTo(sx-6,fy);ctx.closePath();ctx.stroke();
-    ctx.restore();
-  });
-}
-
-function checkCollect(){
-  FRAGS.forEach((f,i)=>{
-    if(f.collected) return;
-    if((P.wx-f.wx)**2+(P.wy-f.wy)**2<.9){
-      f.collected=true;
-      document.getElementById(`dot${i}`).classList.add('on');
-      fragData=f; fragTimer=220;
-      const{sx,sy}=toScreen(f.wx-cam.wx,f.wy-cam.wy);
-      burst(sx,sy-LIFT-16,'#c8b060',18,2.5);
-    }
-  });
-}
-
-function updateFragUI(){
-  if(fragTimer<=0){fragEl.style.opacity='0';return;}
-  fragTimer--;
-  if(fragData){
-    fragEl.innerHTML=`${fragData.text}<br><span style="color:#7a6848;font-size:.84em">${fragData.sub.replace(/\n/g,'<br>')}</span>`;
-    const p=fragTimer>175?(220-fragTimer)/45:fragTimer<45?fragTimer/45:1;
-    fragEl.style.opacity=p;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DUST MOTES
-// ═══════════════════════════════════════════════════════════════
-const dust=Array.from({length:50},()=>({
-  x:Math.random()*W,y:Math.random()*H,
-  vx:(Math.random()-.5)*.2,vy:-(Math.random()*.18+.04),
-  r:Math.random()*1.2+.2,a:Math.random()*.09+.01,w:Math.random()*Math.PI*2
-}));
-
-// ═══════════════════════════════════════════════════════════════
-// PLAYER DEATH / HURT
-// ═══════════════════════════════════════════════════════════════
-let deathFlash=0;
-function hurtPlayer(){
-  if(P.invTimer>0||P.dead) return;
-  P.hp--;
-  P.invTimer=90;
-  updateHpUI();
-  const{sx,sy}=toScreen(P.wx-cam.wx,P.wy-cam.wy);
-  burst(sx,sy-LIFT,'#c04050',12,2);
-  if(P.hp<=0){
-    P.dead=true; P.deathTimer=80;
-    burst(sx,sy-LIFT,'#6a1030',30,3.5);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// UPDATE
-// ═══════════════════════════════════════════════════════════════
-let lastTime=0, t=0;
-
-function update(dt){
-  t++;
-  const d=Math.min(dt,50)/1000;
-
-  // death
-  if(P.dead){
-    P.deathTimer--;
-    if(P.deathTimer<=0){
-      P.dead=false; P.wx=0; P.wy=0; P.hp=P.maxHp; updateHpUI();
-      deathFlash=20;
-      ENEMIES.forEach(e=>{ e.hp=e.maxHp; e.alive=true; });
-    }
-    return;
-  }
-
-  if(P.invTimer>0) P.invTimer--;
-  updateAttack();
-
-  // movement
-  const spd=P.speed*d;
-  let mx=0, my=0;
-  if(keys['ArrowUp']   ||keys['KeyW']){mx-=1;my-=1;}
-  if(keys['ArrowDown'] ||keys['KeyS']){mx+=1;my+=1;}
-  if(keys['ArrowLeft'] ||keys['KeyA']){mx-=1;my+=1;}
-  if(keys['ArrowRight']||keys['KeyD']){mx+=1;my-=1;}
-
-  if(joy.active){mx+=joy.y+joy.x;my+=joy.y-joy.x;}
-
-  const len=Math.sqrt(mx*mx+my*my);
-  if(len>0){mx=mx/len*spd;my=my/len*spd;}
-
-  // store attack direction from movement
-  if(len>0) P.atkDir={x:mx,y:my};
-
-  if(mx&&walkable(P.wx+mx,P.wy)) P.wx+=mx;
-  if(my&&walkable(P.wx,P.wy+my)) P.wy+=my;
-
-  const moving=len>0;
-  P.bob+=moving?.16:.04;
-  if(moving){P.trail.push({wx:P.wx,wy:P.wy});if(P.trail.length>10)P.trail.shift();}
-  else if(P.trail.length)P.trail.shift();
-
-  // enemy AI
-  ENEMIES.forEach(e=>{
-    if(!e.alive)return;
-    if(e.hitTimer>0)e.hitTimer--;
-    const dx=P.wx-e.wx, dy=P.wy-e.wy;
-    const dist=Math.sqrt(dx*dx+dy*dy);
-    // aggro radius 18
-    if(dist<18&&dist>0){
-      const espd=e.speed*d;
-      const ex=dx/dist*espd, ey=dy/dist*espd;
-      if(walkable(e.wx+ex,e.wy)) e.wx+=ex;
-      if(walkable(e.wx,e.wy+ey)) e.wy+=ey;
-    }
-    // damage player on contact
-    if(dist<1.2) hurtPlayer();
-  });
-
-  cam.wx+=(P.wx-cam.wx)*.09;
-  cam.wy+=(P.wy-cam.wy)*.09;
-
-  checkCollect();
-  particles=particles.filter(p=>p.step());
-  dust.forEach(m=>{m.w+=.012;m.x+=m.vx+Math.sin(m.w)*.1;m.y+=m.vy;if(m.y<-10){m.y=H+10;m.x=Math.random()*W;}});
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════════════════
-function render(){
-  ctx.clearRect(0,0,W,H);
-
-  // bg
-  ctx.fillStyle='#020108';ctx.fillRect(0,0,W,H);
-  const fg=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,W*.7);
-  fg.addColorStop(0,'rgba(12,8,22,0)');fg.addColorStop(1,'rgba(4,2,8,.5)');
-  ctx.fillStyle=fg;ctx.fillRect(0,0,W,H);
-
-  // dust
-  dust.forEach(m=>{ctx.save();ctx.globalAlpha=m.a;ctx.fillStyle='#b0a050';ctx.beginPath();ctx.arc(m.x,m.y,m.r,0,Math.PI*2);ctx.fill();ctx.restore();});
-
-  // painter's algo — tiles + player + enemies interleaved by depth
-  const pd=P.wx+P.wy;
-  let drawnP=false;
-  const aliveEnemies=ENEMIES.filter(e=>e.alive).sort((a,b)=>(a.wx+a.wy)-(b.wx+b.wy));
-  let ei=0;
-
-  for(const tile of sortedTiles){
-    const depth=tile.x+tile.y;
-
-    // draw enemies that come before this tile
-    while(ei<aliveEnemies.length&&(aliveEnemies[ei].wx+aliveEnemies[ei].wy)<=depth){
-      drawEnemy(aliveEnemies[ei++]);
-    }
-    // draw player
-    if(!drawnP&&depth>pd){renderPlayer();drawnP=true;}
-
-    drawTile(tile.x,tile.y,tile.type);
-  }
-  while(ei<aliveEnemies.length)drawEnemy(aliveEnemies[ei++]);
-  if(!drawnP)renderPlayer();
-
-  drawFragments(t);
-  particles.forEach(p=>p.draw());
-
-  // vignette
-  const v=ctx.createRadialGradient(W/2,H/2,H*.08,W/2,H/2,H*.75);
-  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.88)');
-  ctx.fillStyle=v;ctx.fillRect(0,0,W,H);
-
-  // death flash
-  if(deathFlash>0){ctx.fillStyle=`rgba(60,0,20,${deathFlash/20*.5})`;ctx.fillRect(0,0,W,H);deathFlash--;}
-  // hit flash
-  if(P.invTimer>80){ctx.fillStyle=`rgba(160,0,30,${(P.invTimer-80)/10*.15})`;ctx.fillRect(0,0,W,H);}
-
-  // scanlines
-  ctx.fillStyle='rgba(0,0,0,.018)';
-  for(let y=0;y<H;y+=3)ctx.fillRect(0,y,W,1);
-}
-
-function renderPlayer(){
-  if(P.dead) return;
-  const{sx,sy}=toScreen(P.wx-cam.wx,P.wy-cam.wy);
-  const bobY=Math.sin(P.bob)*2.5;
-  const py=sy-LIFT+bobY;
-  const flash=P.invTimer>0&&Math.floor(P.invTimer/5)%2===0;
-
-  // shadow
-  ctx.save();ctx.globalAlpha=.25;
-  const sg=ctx.createRadialGradient(sx,sy-WALL_H*.3,0,sx,sy-WALL_H*.3,20);
-  sg.addColorStop(0,'rgba(0,0,0,.7)');sg.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=sg;ctx.ellipse(sx,sy-WALL_H*.3,20,7,0,0,Math.PI*2);ctx.fill();
-  ctx.restore();
-
-  // trail
-  P.trail.forEach((tr,i)=>{
-    const{sx:tx,sy:ty}=toScreen(tr.wx-cam.wx,tr.wy-cam.wy);
-    drawChar(tx,ty-LIFT+bobY,(i/P.trail.length)*.08,.8);
-  });
-
-  drawChar(sx,py,flash?.3:1,1,t,P.attacking,P.atkTimer,P.atkDir,P.invTimer>75&&P.invTimer<85);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LOOP
-// ═══════════════════════════════════════════════════════════════
-let started=false;
-function loop(ts){
-  requestAnimationFrame(loop);
-  const dt=lastTime?(ts-lastTime):16; lastTime=ts;
-  if(!started)return;
-  update(dt);render();updateFragUI();
-}
-requestAnimationFrame(loop);
-
-// ═══════════════════════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════════════════════
-function startGame(){
-  requestFS();
-  document.getElementById('overlay').style.display='none';
-  started=true;
-  setTimeout(()=>{
-    document.getElementById('counter').style.opacity='.3';
-    document.getElementById('dots').style.opacity='1';
-    document.getElementById('hpbar').style.opacity='1';
-  },2000);
-}
-document.getElementById('overlay').addEventListener('click',startGame);
-document.getElementById('overlay').addEventListener('touchend',e=>{e.preventDefault();startGame();},{passive:false});
-</script>
-</body>
-  </html>
