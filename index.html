@@ -688,11 +688,11 @@ const ENEMIES=[
   // север
   {wx: -5,wy:-20,speed:1.1,hp:4,maxHp:4,phase:0.6},
   {wx:  4,wy:-32,speed:1.2,hp:5,maxHp:5,phase:1.4},
-  {wx: -3,wy:-50,speed:1.3,hp:5,maxHp:5,phase:2.0},
+  {wx: -3,wy:-45,speed:1.3,hp:5,maxHp:5,phase:2.0},
   // юг
   {wx:  3,wy: 22,speed:1.1,hp:4,maxHp:4,phase:0.3},
   {wx: -5,wy: 32,speed:1.2,hp:5,maxHp:5,phase:1.7},
-  {wx:  4,wy: 50,speed:1.3,hp:5,maxHp:5,phase:0.8},
+  {wx:  4,wy: 45,speed:1.3,hp:5,maxHp:5,phase:0.8},
   // запад
   {wx:-20,wy:-5, speed:1.1,hp:4,maxHp:4,phase:1.2},
   {wx:-30,wy: 8, speed:1.2,hp:5,maxHp:5,phase:0.5},
@@ -906,15 +906,18 @@ function buildTileSprite(type) {
 // рисуем все тайлы один раз в offscreen, потом просто drawImage
 let worldOC = null, worldOCtx = null;
 let worldOC_camX = null, worldOC_camY = null;
-const WORLD_MARGIN = 6; // тайлов запаса за краями
+const WORLD_MARGIN = 10; // тайлов запаса — rebuild реже
 
 function isCamMoved() {
-  const cx = Math.round(cam.wx), cy = Math.round(cam.wy);
-  return cx !== worldOC_camX || cy !== worldOC_camY;
+  if(worldOC_camX === null) return true;
+  const dx = cam.wx - worldOC_camX, dy = cam.wy - worldOC_camY;
+  // rebuild только когда камера ушла на 4+ тайла — гораздо реже
+  return Math.abs(dx) > 4 || Math.abs(dy) > 4;
 }
 
 function rebuildWorldCanvas() {
-  const cx = Math.round(cam.wx), cy = Math.round(cam.wy);
+  // запоминаем ТОЧНУЮ позицию камеры в момент build
+  const cx = cam.wx, cy = cam.wy;
   worldOC_camX = cx; worldOC_camY = cy;
 
   // сколько тайлов влезает на экран
@@ -948,8 +951,8 @@ function rebuildWorldCanvas() {
 
     const sx = W/2 + rdx * TW/2 - rdy * TW/2 + offX;
     const sy = H/2 + rdx * TH/2 + rdy * TH/2 + offY;
-    const dx = Math.round(sx - pw/2);
-    const dy = Math.round(sy - TH/2 - 3);
+    const dx = sx - pw/2;
+    const dy = sy - TH/2 - 3;
 
     worldOCtx.drawImage(_tileCache[tile.type] || _tileCache['floor'], dx, dy);
     // трава — рисуем прямо сюда, без доп canvas
@@ -1301,7 +1304,7 @@ function update(dt){
   cam.wy+=(P.wy-cam.wy)*.09;
   checkCollect();
   particles=particles.filter(p=>p.step());
-  dust.forEach(m=>{m.w+=.012;m.x+=m.vx+Math.sin(m.w)*.1;m.y+=m.vy;if(m.y<-10){m.y=H+10;m.x=Math.random()*W;}});
+  dust.forEach(m=>{m.w+=.012;m.x+=m.vx+Math.sin(m.w)*.1;m.y+=m.vy;if(m.y<-10){m.y=H+10;m.x=Math.random()*W;}if(m.x<-10||m.x>W+10){m.x=Math.random()*W;m.y=Math.random()*H;}});
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1338,7 +1341,7 @@ function render(){
   // дробная часть камеры (сколько пикселей между тайлами)
   const fracX = (cam.wx - worldOC_camX) * TW/2 - (cam.wy - worldOC_camY) * TW/2;
   const fracY = (cam.wx - worldOC_camX) * TH/2 + (cam.wy - worldOC_camY) * TH/2;
-  ctx.drawImage(worldOC, Math.round(-offX + fracX), Math.round(-offY + fracY));
+  ctx.drawImage(worldOC, -offX + fracX, -offY + fracY);
 
   // поверх тайлов рисуем entities в правильном depth order
   const pd=P.wx+P.wy;
