@@ -170,6 +170,7 @@ canvas { display:block; position:fixed; inset:0; }
 const C = document.getElementById('c');
 const X = C.getContext('2d');
 let W = 0, H = 0;
+let worldDirty = true;
 
 function resize() {
   W = C.width  = window.innerWidth;
@@ -371,6 +372,7 @@ const P = {
   dead:false, deadT:0,
   bob:0,
   trail:[],
+  lastDx:1, lastDy:0,  // last movement direction for attack
 };
 // ── hearts UI ──
 const heartsEl = document.getElementById('hearts');
@@ -457,11 +459,12 @@ let WCX=null, WCY=null;  // cam position when world was last drawn
 const WPAD = 8;           // tile padding around viewport
 
 function needRebuild() {
-  if (!WOC || WCX===null) return true;
+  if (!WOC || WCX===null || worldDirty) return true;
   return Math.abs(CAM.wx-WCX)>3 || Math.abs(CAM.wy-WCY)>3;
 }
 
 function rebuildWorld() {
+  worldDirty = false;
   WCX = CAM.wx; WCY = CAM.wy;
 
   const OW = W + WPAD*TW*2;
@@ -533,11 +536,16 @@ function updateAttack() {
   if (P.atkT<=0) return;
   P.atkT--;
   if (P.atkT===8) {
-    // hit enemies in range
+    const adx=P.lastDx||1, ady=P.lastDy||0;
+    const alen=Math.sqrt(adx*adx+ady*ady)||1;
     for (const e of ENEMIES) {
       if (!e.alive) continue;
       const dx=e.wx-P.wx, dy=e.wy-P.wy;
-      if (dx*dx+dy*dy < 2.5*2.5) {
+      const dist2=dx*dx+dy*dy;
+      if (dist2 < 2.5*2.5) {
+        // dot product check — must be roughly in facing direction
+        const dot=(dx/Math.sqrt(dist2))*(adx/alen)+(dy/Math.sqrt(dist2))*(ady/alen);
+        if (dot < -0.2) continue; // behind player
         e.hp--; e.hitT=12;
         const s=w2s(e.wx-CAM.wx, e.wy-CAM.wy);
         spawnBurst(s.x, s.y-PLIFT, '#c06840', 10, 2);
@@ -714,8 +722,11 @@ function drawEnemy(e) {
 // DRAW FRAGMENT ORB
 // ═══════════════════════════════════════════════════════
 function drawFragments() {
+  const vpW = W/TWH + 6, vpH = H/THH + 10;
   for (const f of FRAGS) {
     if (f.collected) continue;
+    const rdx=f.wx-CAM.wx, rdy=f.wy-CAM.wy;
+    if (Math.abs(rdx-rdy)>vpW || Math.abs(rdx+rdy)>vpH) continue;
     f.phase+=.02;
     const s=w2s(f.wx-CAM.wx, f.wy-CAM.wy);
     const fx=s.x, fy=s.y-PLIFT-14;
@@ -753,9 +764,9 @@ function drawVignette() {
 // DUST MOTES (screen-space, atmospheric)
 // ═══════════════════════════════════════════════════════
 const DUST = Array.from({length:30},()=>({
-  x:Math.random()*1200,y:Math.random()*800,
-  vx:(Math.random()-.5)*.18,vy:-(Math.random()*.15+.04),
-  r:Math.random()*1.1+.2,a:Math.random()*.08+.01,
+  x:Math.random()*W, y:Math.random()*H,
+  vx:(Math.random()-.5)*.18, vy:-(Math.random()*.15+.04),
+  r:Math.random()*1.1+.2, a:Math.random()*.08+.01,
   w:Math.random()*Math.PI*2
 }));
 
@@ -767,7 +778,6 @@ function hurtPlayer() {
   if (P.invT>0||P.dead) return;
   P.hp--; P.invT=90;
   syncHearts();
-  const s=w2s(0,0);
   spawnBurst(W/2,H/2-PLIFT,'#c04050',10,2);
   if (P.hp<=0) {
     P.dead=true; P.deadT=70;
@@ -778,7 +788,7 @@ function hurtPlayer() {
 // ═══════════════════════════════════════════════════════
 // UPDATE
 // ═══════════════════════════════════════════════════════
-let lastT=0, worldDirty=true, gameOn=false;
+let lastT=0, gameOn=false;
 
 function update(dt) {
   const d = Math.min(dt,50)/1000;
@@ -789,6 +799,7 @@ function update(dt) {
     deathFlash=15;
     if (P.deadT<=0) {
       P.dead=false; P.wx=0; P.wy=0; P.hp=P.maxHp; syncHearts();
+      CAM.wx=0; CAM.wy=0;
       ENEMIES.forEach(e=>{e.alive=true;e.hp=e.maxHp;});
       worldDirty=true;
     }
@@ -808,7 +819,7 @@ function update(dt) {
   if (JOY.on) { mx+=JOY.x+JOY.y; my+=JOY.y-JOY.x; }
 
   const len=Math.sqrt(mx*mx+my*my);
-  if (len>0) { mx=mx/len*SPD; my=my/len*SPD; }
+  if (len>0) { mx=mx/len*SPD; my=my/len*SPD; P.lastDx=mx; P.lastDy=my; }
 
   if (mx && canWalk(P.wx+mx,P.wy)) P.wx+=mx;
   if (my && canWalk(P.wx,P.wy+my)) P.wy+=my;
@@ -823,7 +834,7 @@ function update(dt) {
   // enemy AI (only when in viewport range)
   const VIEW=18;
   for (const e of ENEMIES) {
-    if (!e.alive) return;
+    if (!e.alive) continue;
     if (e.hitT>0) e.hitT--;
     const dx=P.wx-e.wx, dy=P.wy-e.wy;
     const dist2=dx*dx+dy*dy;
@@ -873,14 +884,14 @@ function render() {
   X.globalAlpha=1;
 
   // rebuild world if needed
-  if (needRebuild()) rebuildWorld();
+  if (needRebuild()) { rebuildWorld(); }
 
   // blit world — with subpixel cam offset for smooth scroll
   const bx = WOC.width/2  - W/2;
   const by = WOC.height/2 - H/2;
   const fx = (CAM.wx-WCX)*TWH - (CAM.wy-WCY)*TWH;
   const fy = (CAM.wx-WCX)*THH + (CAM.wy-WCY)*THH;
-  X.drawImage(WOC, fx-bx, fy-by);
+  X.drawImage(WOC, -fx-bx, -fy-by);
 
   // entities painter's algo
   const pd=P.wx+P.wy;
