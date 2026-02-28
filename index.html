@@ -952,9 +952,22 @@ function rebuildWorldCanvas() {
     const dy = Math.round(sy - TH/2 - 3);
 
     worldOCtx.drawImage(_tileCache[tile.type] || _tileCache['floor'], dx, dy);
+    // трава — рисуем прямо сюда, без доп canvas
     if(tile.type !== 'void') {
-      const gs = getGrassSprite(tile.x, tile.y);
-      if(gs) worldOCtx.drawImage(gs, dx, dy);
+      const blades = getGrass(tile.x, tile.y);
+      if(blades.length) {
+        const cx = dx + (TW+4)/2, cy = dy + TH/2+3;
+        for(const b of blades) {
+          worldOCtx.globalAlpha = b.a;
+          worldOCtx.strokeStyle = b.col;
+          worldOCtx.lineWidth = 1;
+          worldOCtx.beginPath();
+          worldOCtx.moveTo(cx+b.bx, cy+b.by);
+          worldOCtx.quadraticCurveTo(cx+b.bx+b.lean*.5, cy+b.by-b.h*.6, cx+b.bx+b.lean, cy+b.by-b.h);
+          worldOCtx.stroke();
+        }
+        worldOCtx.globalAlpha = 1;
+      }
     }
   }
 }
@@ -965,46 +978,17 @@ function drawTileOnMain(x, y, type) {
   const pw=TW+4, ph=TH+WALL_H+8;
   const dx=Math.round(sx-pw/2), dy=Math.round(sy-TH/2-3);
   ctx.drawImage(_tileCache[type]||_tileCache['floor'], dx, dy);
-  if(type!=='void'){
-    const gs=getGrassSprite(x,y);
-    if(gs) ctx.drawImage(gs, dx, dy);
-  }
 }
 
-
-// grass sprites кешируются отдельно (уникальны для каждого тайла)
-const _grassCache2 = new Map();
-function getGrassSprite(x,y){
-  const k=`${x},${y}`;
-  if(_grassCache2.has(k)) return _grassCache2.get(k);
-  const blades=getGrass(x,y);
-  if(!blades.length){ _grassCache2.set(k,null); return null; }
-  const pw=TW+4, ph=TH+WALL_H+8;
-  const oc=document.createElement('canvas'); oc.width=pw; oc.height=ph;
-  const ox=oc.getContext('2d');
-  const cx=pw/2, cy=TH/2+3;
-  blades.forEach(b=>{
-    ox.save();ox.globalAlpha=b.a;ox.strokeStyle=b.col;ox.lineWidth=1;
-    ox.beginPath();ox.moveTo(cx+b.bx,cy+b.by);
-    ox.quadraticCurveTo(cx+b.bx+b.lean*.5,cy+b.by-b.h*.6,cx+b.bx+b.lean,cy+b.by-b.h);
-    ox.stroke();
-    if(b.twin){ox.globalAlpha*=.5;ox.beginPath();ox.moveTo(cx+b.bx+1.5,cy+b.by);ox.lineTo(cx+b.bx+b.lean*.4+1,cy+b.by-b.h*.7);ox.stroke();}
-    ox.restore();
-  });
-  _grassCache2.set(k,oc);
-  return oc;
-}
+// grass sprites больше не нужны — рисуются в worldOC inline
+// grass drawn inline in rebuildWorldCanvas
 
 function drawTile(x,y,type){
-  if(!isTileVisible(x,y)) return;
+  // используется только для minimap — main render идёт через worldOC
   const{sx,sy}=toScreen(x-cam.wx,y-cam.wy);
   const pw=TW+4, ph=TH+WALL_H+8;
   const dx=Math.round(sx-pw/2), dy=Math.round(sy-TH/2-3);
   ctx.drawImage(_tileCache[type]||_tileCache['floor'], dx, dy);
-  if(type!=='void'){
-    const gs=getGrassSprite(x,y);
-    if(gs) ctx.drawImage(gs, dx, dy);
-  }
 }
 
 function drawChar(sx,sy,alpha=1,scale=1,t2=0,attacking=false,atkTimer=0,atkDir={x:1,y:0},hitFlash=false,dashing=false){
