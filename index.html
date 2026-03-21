@@ -140,20 +140,20 @@ body::before{
 .rule::before{
   content:attr(data-label);position:absolute;top:-8px;left:0;
   font-size:8px;letter-spacing:0.5em;color:var(--muted);
-  text-transform:uppercase;background:var(--bg);padding-right:16px;
+  text-transform:uppercase;background:transparent;padding-right:16px;
 }
 .rule::after{
   content:attr(data-num);position:absolute;top:-8px;right:0;
   font-size:8px;letter-spacing:0.3em;color:var(--dim);
-  background:var(--bg);padding-left:16px;
+  background:transparent;padding-left:16px;
 }
 
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
 .big-head{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.05;margin-bottom:24px}
 .big-head em{font-style:italic;color:var(--accent)}
-.body-text{font-size:14px;line-height:1.9;color:var(--muted);margin-bottom:16px}
+.body-text{font-size:16px;line-height:1.9;color:var(--muted);margin-bottom:16px}
 .excerpt{border-left:1px solid var(--dim);padding-left:20px;margin-bottom:20px}
-.excerpt p{font-family:'Playfair Display',serif;font-style:italic;font-size:15px;line-height:1.8;color:var(--accent)}
+.excerpt p{font-family:'Playfair Display',serif;font-style:italic;font-size:17px;line-height:1.8;color:var(--accent)}
 .excerpt span{display:block;margin-top:8px;font-size:8px;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase}
 .btn{
   display:inline-block;font-size:11px;letter-spacing:0.4em;
@@ -166,18 +166,15 @@ body::before{
 /* BOOK */
 .book-grid{display:grid;grid-template-columns:2fr 1fr;gap:64px;align-items:center}
 .book-cover{
-  aspect-ratio:3/4;background:var(--dim);
+  aspect-ratio:3/4;background:#0d0c0f;border:1px solid var(--dim);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:12px;position:relative;overflow:hidden;
 }
-.book-cover::before{
-  content:'';position:absolute;inset:0;
-  background:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,0.012) 20px,rgba(255,255,255,0.012) 21px);
-}
+.book-cover::before{content:none}
 .book-cover-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--paper);text-align:center;padding:0 20px;line-height:1.2;position:relative;z-index:1}
 .book-cover-sub{font-size:8px;letter-spacing:0.4em;color:var(--muted);text-transform:uppercase;position:relative;z-index:1}
 .meta-table{margin-top:28px;display:flex;flex-direction:column;gap:0}
-.meta-row{display:flex;justify-content:space-between;font-size:11px;letter-spacing:0.2em;padding:10px 0;border-bottom:1px solid var(--dim)}
+.meta-row{display:flex;justify-content:space-between;font-size:13px;letter-spacing:0.2em;padding:10px 0;border-bottom:1px solid var(--dim)}
 .meta-row span:first-child{color:var(--muted)}
 .meta-row span:last-child{color:var(--paper)}
 
@@ -196,17 +193,17 @@ body::before{
 
 /* GALLERY */
 .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
-.gitem{aspect-ratio:3/4;background:var(--dim);position:relative;overflow:hidden}
-.gitem::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.45);transition:opacity 0.4s}
+.gitem{aspect-ratio:3/4;background:#0d0c0f;border:1px solid var(--dim);position:relative;overflow:hidden}
+.gitem::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.2);transition:opacity 0.4s}
 .gitem:hover::after{opacity:0}
-.gitem-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase}
+.gitem-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:0.4em;color:var(--dim);text-transform:uppercase;opacity:0.4}
 .gallery-caption{text-align:center;font-size:11px;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;margin-top:24px}
 
 /* RIDDLES */
 .riddle-intro{font-size:13px;line-height:1.9;color:var(--muted);margin-bottom:48px;text-align:center;max-width:500px;margin-left:auto;margin-right:auto}
 .riddle-block{border:1px solid var(--dim);padding:40px;margin-bottom:24px;position:relative;max-width:640px;margin-left:auto;margin-right:auto;transition:border-color 0.3s}
 .riddle-block:hover{border-color:var(--muted)}
-.riddle-num{position:absolute;top:-8px;left:20px;font-size:8px;letter-spacing:0.3em;color:var(--muted);background:var(--bg);padding:0 8px;text-transform:uppercase}
+.riddle-num{position:absolute;top:-8px;left:20px;font-size:8px;letter-spacing:0.3em;color:var(--muted);background:transparent;padding:0 8px;text-transform:uppercase}
 .riddle-q{font-family:'Playfair Display',serif;font-style:italic;font-size:17px;line-height:1.7;color:var(--paper);margin-bottom:24px}
 .riddle-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--dim);color:var(--paper);font-family:'Courier Prime',monospace;font-size:13px;letter-spacing:0.2em;padding:8px 0;outline:none;transition:border-color 0.3s}
 .riddle-input::placeholder{color:var(--dim)}
@@ -336,7 +333,7 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
   <div class="hero-divider"></div>
   <div class="hero-counter">
     <span class="hero-counter-label">remaining days</span>
-    <div class="hero-counter-num" id="heroNum">36</div>
+    <div class="hero-counter-num" id="heroNum">34</div>
   </div>
   <span class="scroll-hint">↓ scroll</span>
 </div>
@@ -369,16 +366,15 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
 
 <!-- BOOK -->
 <div class="wrap">
-  <div class="rule" data-label="the book" data-num="02"></div>
+  <div class="rule" data-label="the something" data-num="02"></div>
   <div class="book-grid reveal">
     <div class="book-cover">
-      <div class="book-cover-title">not<br>a void</div>
-      <div class="book-cover-sub">a collection — 2026</div>
+      <div class="book-cover-sub" style="opacity:0.3;">soon...</div>
     </div>
     <div>
-      <h2 class="big-head">100 days.<br><em>one book.</em></h2>
-      <p class="body-text">everything written over the course of the countdown — collected, ordered, released on day zero.</p>
-      <p class="body-text">not a diary. not a manifesto. something between the two, without a name yet.</p>
+      <h2 class="big-head">100 days.<br><em>something at the end.</em></h2>
+      <p class="body-text">everything written, drawn, and built over the course of the countdown.</p>
+      <p class="body-text">collected. ordered. released on day zero.</p>
       <div class="meta-table">
         <div class="meta-row"><span>status</span><span>in progress</span></div>
         <div class="meta-row"><span>format</span><span>digital / free</span></div>
@@ -391,7 +387,7 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
 
 <!-- GAME -->
 <div class="wrap">
-  <div class="rule" data-label="the game" data-num="03"></div>
+  <div class="rule" data-label="something else" data-num="03"></div>
   <div class="game-grid reveal">
     <div>
       <h2 class="big-head">coming<br><em>soon.</em></h2>
@@ -422,12 +418,12 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
 <div class="wrap">
   <div class="rule" data-label="sketches" data-num="04"></div>
   <div class="gallery reveal">
-    <div class="gitem"><div class="gitem-inner">sketch 01</div></div>
-    <div class="gitem"><div class="gitem-inner">sketch 02</div></div>
-    <div class="gitem"><div class="gitem-inner">sketch 03</div></div>
-    <div class="gitem"><div class="gitem-inner">sketch 04</div></div>
-    <div class="gitem"><div class="gitem-inner">sketch 05</div></div>
-    <div class="gitem"><div class="gitem-inner">more →</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
   </div>
   <p class="gallery-caption">hand-drawn. pencil. no reference.</p>
 </div>
@@ -462,9 +458,10 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
   <div class="two-col reveal">
     <div>
       <h2 class="big-head">what is<br><em>this.</em></h2>
-      <p class="body-text">a 100-day project. texts written at 23:47, sketches drawn without reference, a game built from scratch, a book assembled from the silence between posts.</p>
-      <p class="body-text">no clear genre. no target audience. just something that needed to exist and found a way to.</p>
-      <p class="body-text">the countdown started. it will end. what happens at zero has been decided from the beginning.</p>
+      <p class="body-text">started on day 100. ends on day zero.</p>
+      <p class="body-text">texts at 23:47. sketches without reference. a game built in the dark. something written between the posts that wasn't supposed to be read yet.</p>
+      <p class="body-text">no genre. no audience in mind. just a countdown and everything that filled it.</p>
+      <p class="body-text">what's in between — you've already seen part of it.</p>
     </div>
     <div>
       <div style="margin-bottom:32px;">
@@ -475,7 +472,7 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
           <div class="meta-row"><span>posts with reactions</span><span>every one</span></div>
           <div class="meta-row"><span>nullchat messages</span><span>2</span></div>
           <div class="meta-row"><span>sketches drawn</span><span>5+</span></div>
-          <div class="meta-row"><span>days remaining</span><span id="statsNum">36</span></div>
+          <div class="meta-row"><span>days remaining</span><span id="statsNum">34</span></div>
         </div>
       </div>
     </div>
@@ -495,7 +492,7 @@ footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 a
     <a href="https://t.me/sentinel0x16_bot" target="_blank">sentinel</a>
   </div>
 </footer>
-<p class="footer-copy">remaining days: <span id="footerNum">36</span> — day zero is coming</p>
+<p class="footer-copy">remaining days: <span id="footerNum">34</span> — day zero is coming</p>
 
 <script>
 // cursor
@@ -677,7 +674,7 @@ document.addEventListener('touchmove',e=>{ const t=e.touches[0]; mouseX=t.client
 document.addEventListener('touchend',()=>{ mouseX=-999; mouseY=-999; gameBlur.style.backdropFilter='blur(22px)'; gameHint.style.opacity=1; });
 
 // countdown
-const endDate=new Date('2026-04-25T23:47:00');
+const endDate=new Date('2026-04-24T23:47:00');
 function updateCountdown(){
   const diff=Math.max(0,Math.ceil((endDate-new Date())/(1000*60*60*24)));
   document.getElementById('heroNum').textContent=diff;
