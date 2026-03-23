@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>#till_lights_out</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Courier+Prime:ital@0;1&display=swap');
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#0d0c0f;
+  --paper:#e8e3d9;
+  --dim:#3a3830;
+  --muted:#5a554a;
+  --accent:#c8c0b0;
+}
+
+html{scroll-behavior:smooth}
+
+body{
+  background:var(--bg);
+  color:var(--paper);
+  font-family:'Courier Prime',monospace;
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* ambient bg gradient */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 50%, rgba(40,30,60,0.5) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 80% 30%, rgba(20,40,50,0.4) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 50% 80%, rgba(30,20,40,0.3) 0%, transparent 70%);
+  pointer-events:none;
+  animation:ambientShift 12s ease-in-out infinite alternate;
+}
+@keyframes ambientShift{
+  0%{opacity:0.6}
+  50%{opacity:1}
+  100%{opacity:0.7}
+}
+
+::-webkit-scrollbar{width:2px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--dim)}
+
+.cursor{
+  position:fixed;width:5px;height:5px;
+  background:var(--paper);border-radius:50%;
+  pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);
+  mix-blend-mode:difference;
+}
+
+#canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+.noise{
+  position:fixed;inset:-50%;z-index:1;pointer-events:none;
+  opacity:0.025;
+  animation:noiseAnim 0.15s steps(1) infinite;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:300px 300px;
+}
+@keyframes noiseAnim{
+  0%{transform:translate(0,0)}20%{transform:translate(-3%,-2%)}
+  40%{transform:translate(2%,3%)}60%{transform:translate(-2%,1%)}80%{transform:translate(3%,-3%)}
+}
+
+.vignette{
+  position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,0.9) 100%);
+}
+
+/* HERO */
+#hero{
+  position:relative;height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:10;text-align:center;padding:0 20px;
+}
+.hero-eyebrow{
+  font-size:9px;letter-spacing:0.5em;
+  color:var(--muted);text-transform:uppercase;
+  opacity:0;animation:fadeIn 1s ease forwards 0.4s;
+}
+.hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(52px,12vw,120px);
+  font-weight:900;line-height:0.9;
+  letter-spacing:-0.03em;color:var(--paper);
+  margin:20px 0 12px;
+  opacity:0;animation:fadeUp 1.2s ease forwards 0.7s;
+}
+.hero-title em{font-style:italic;font-weight:400;color:var(--accent)}
+.hero-sub{
+  font-size:10px;letter-spacing:0.3em;
+  color:var(--muted);text-transform:uppercase;
+  opacity:0;animation:fadeIn 1s ease forwards 1.3s;
+}
+.hero-divider{
+  width:1px;height:80px;
+  background:linear-gradient(to bottom,transparent,var(--muted),transparent);
+  margin:48px auto;
+  opacity:0;animation:fadeIn 1s ease forwards 1.8s;
+}
+.hero-counter{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  opacity:0;animation:fadeIn 1s ease forwards 2.2s;
+}
+.hero-counter-label{font-size:8px;letter-spacing:0.5em;color:var(--muted);text-transform:uppercase}
+.hero-counter-num{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(72px,15vw,140px);
+  font-weight:900;font-style:italic;color:var(--paper);
+  opacity:0.08;line-height:1;transition:opacity 0.5s;user-select:none;
+}
+.hero-counter-num:hover{opacity:0.5}
+.scroll-hint{
+  position:absolute;bottom:110px;left:50%;
+  transform:translateX(-50%);
+  font-size:8px;letter-spacing:0.4em;
+  color:var(--muted);text-transform:uppercase;
+  opacity:0;white-space:nowrap;
+  animation:fadeIn 1s ease forwards 3.5s, bob 2s ease-in-out infinite 4s;
+}
+@keyframes bob{
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(4px)}
+}
+
+/* SECTIONS */
+.wrap{position:relative;z-index:10;padding:100px 40px;max-width:960px;margin:0 auto}
+.rule{width:100%;height:1px;background:var(--dim);margin-bottom:60px;position:relative}
+.rule::before{
+  content:attr(data-label);position:absolute;top:-8px;left:0;
+  font-size:8px;letter-spacing:0.5em;color:var(--muted);
+  text-transform:uppercase;background:transparent;padding-right:16px;
+}
+.rule::after{
+  content:attr(data-num);position:absolute;top:-8px;right:0;
+  font-size:8px;letter-spacing:0.3em;color:var(--dim);
+  background:transparent;padding-left:16px;
+}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.big-head{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.05;margin-bottom:24px}
+.big-head em{font-style:italic;color:var(--accent)}
+.body-text{font-size:16px;line-height:1.9;color:var(--muted);margin-bottom:16px}
+.excerpt{border-left:1px solid var(--dim);padding-left:20px;margin-bottom:20px}
+.excerpt p{font-family:'Playfair Display',serif;font-style:italic;font-size:17px;line-height:1.8;color:var(--accent)}
+.excerpt span{display:block;margin-top:8px;font-size:8px;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase}
+.btn{
+  display:inline-block;font-size:11px;letter-spacing:0.4em;
+  text-transform:uppercase;color:var(--muted);text-decoration:none;
+  border:1px solid var(--dim);padding:10px 20px;
+  transition:all 0.3s;margin-top:8px;font-family:'Courier Prime',monospace;
+}
+.btn:hover{color:var(--paper);border-color:var(--accent);background:rgba(200,192,176,0.04)}
+
+/* BOOK */
+.book-grid{display:grid;grid-template-columns:2fr 1fr;gap:64px;align-items:center}
+.book-cover{
+  aspect-ratio:3/4;background:#0d0c0f;border:1px solid var(--dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;position:relative;overflow:hidden;
+}
+.book-cover::before{content:none}
+.book-cover-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:900;color:var(--paper);text-align:center;padding:0 20px;line-height:1.2;position:relative;z-index:1}
+.book-cover-sub{font-size:8px;letter-spacing:0.4em;color:var(--muted);text-transform:uppercase;position:relative;z-index:1}
+.meta-table{margin-top:28px;display:flex;flex-direction:column;gap:0}
+.meta-row{display:flex;justify-content:space-between;font-size:13px;letter-spacing:0.2em;padding:10px 0;border-bottom:1px solid var(--dim);gap:16px}
+.meta-row span:first-child{color:var(--muted);white-space:nowrap;flex-shrink:0}
+.meta-row span:last-child{color:var(--paper);text-align:right;word-break:break-word}
+.meta-row span:first-child{color:var(--muted)}
+.meta-row span:last-child{color:var(--paper)}
+
+/* GAME */
+.game-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.game-screen{aspect-ratio:9/16;background:#050508;border:1px solid var(--dim);position:relative;overflow:hidden}
+.game-screen canvas{width:100%;height:100%;display:block}
+.game-scanline{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.08) 3px,rgba(0,0,0,0.08) 4px);
+  pointer-events:none;z-index:2;
+}
+.game-label{position:absolute;bottom:12px;right:12px;font-size:7px;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase;z-index:3}
+.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.tag{font-size:8px;letter-spacing:0.3em;color:var(--muted);border:1px solid var(--dim);padding:4px 10px;text-transform:uppercase}
+
+/* GALLERY */
+.gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.gitem{aspect-ratio:3/4;background:#0d0c0f;border:1px solid var(--dim);position:relative;overflow:hidden}
+.gitem::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,0.2);transition:opacity 0.4s}
+.gitem:hover::after{opacity:0}
+.gitem-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;letter-spacing:0.4em;color:var(--dim);text-transform:uppercase;opacity:0.4}
+.gallery-caption{text-align:center;font-size:11px;letter-spacing:0.3em;color:var(--muted);text-transform:uppercase;margin-top:24px}
+
+/* RIDDLES */
+.riddle-intro{font-size:13px;line-height:1.9;color:var(--muted);margin-bottom:48px;text-align:center;max-width:500px;margin-left:auto;margin-right:auto}
+.riddle-block{border:1px solid var(--dim);padding:40px;margin-bottom:24px;position:relative;max-width:640px;margin-left:auto;margin-right:auto;transition:border-color 0.3s}
+.riddle-block:hover{border-color:var(--muted)}
+.riddle-num{position:absolute;top:-8px;left:20px;font-size:8px;letter-spacing:0.3em;color:var(--muted);background:transparent;padding:0 8px;text-transform:uppercase}
+.riddle-q{font-family:'Playfair Display',serif;font-style:italic;font-size:17px;line-height:1.7;color:var(--paper);margin-bottom:24px}
+.riddle-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--dim);color:var(--paper);font-family:'Courier Prime',monospace;font-size:13px;letter-spacing:0.2em;padding:8px 0;outline:none;transition:border-color 0.3s}
+.riddle-input::placeholder{color:var(--dim)}
+.riddle-input:focus{border-color:var(--accent)}
+.riddle-feedback{display:none;margin-top:14px;font-size:11px;letter-spacing:0.25em;text-transform:uppercase}
+.riddle-feedback.show{display:block;color:var(--accent)}
+.riddle-feedback.wrong{display:block;color:#7a3535}
+
+/* FOOTER */
+footer{position:relative;z-index:10;padding:60px 40px;max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--dim)}
+.footer-l{display:flex;flex-direction:column;gap:8px}
+.footer-title{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;font-style:italic;color:var(--paper)}
+.footer-sub{font-size:8px;letter-spacing:0.4em;color:var(--muted);text-transform:uppercase}
+.footer-links{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.footer-links a{font-size:11px;letter-spacing:0.3em;color:var(--muted);text-decoration:none;text-transform:uppercase;transition:color 0.3s}
+.footer-links a:hover{color:var(--paper)}
+.footer-copy{position:relative;z-index:10;text-align:center;font-size:8px;letter-spacing:0.3em;color:var(--dim);text-transform:uppercase;padding-bottom:40px}
+
+/* ANIMATIONS */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.reveal{opacity:0;transform:translateY(20px);transition:opacity 0.8s ease,transform 0.8s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* SECRETS */
+.secret-overlay{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,0);
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:24px;padding:40px;text-align:center;
+  transition:background 0.6s ease;
+}
+.secret-overlay.active{background:rgba(0,0,0,0.97)}
+.secret-inner{opacity:0;transform:translateY(8px);transition:opacity 0.8s ease 0.4s,transform 0.8s ease 0.4s}
+.secret-overlay.active .secret-inner{opacity:1;transform:translateY(0)}
+.secret-text{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(16px,2.5vw,26px);color:#e8e3d9;
+  line-height:1.9;max-width:480px;position:relative;
+}
+.secret-text::before{
+  content:'';position:absolute;inset:-20px;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.01) 2px,rgba(255,255,255,0.01) 4px);
+  pointer-events:none;animation:scanReveal 1.2s ease forwards;
+}
+@keyframes scanReveal{
+  0%{opacity:1;transform:translateY(-100%)}
+  100%{opacity:0;transform:translateY(100%)}
+}
+@keyframes glitchIn{
+  0%  {clip-path:inset(40% 0 60% 0);transform:translate(-4px,0);opacity:0.3}
+  20% {clip-path:inset(10% 0 85% 0);transform:translate(4px,0);opacity:0.6}
+  40% {clip-path:inset(60% 0 20% 0);transform:translate(-2px,0);opacity:0.4}
+  60% {clip-path:inset(80% 0 5% 0);transform:translate(2px,0);opacity:0.7}
+  80% {clip-path:inset(0% 0 90% 0);transform:translate(0,0);opacity:0.9}
+  100%{clip-path:inset(0% 0 0% 0);transform:translate(0,0);opacity:1}
+}
+.secret-text.glitching{animation:glitchIn 0.6s steps(1) forwards}
+.secret-close{font-size:8px;letter-spacing:0.4em;color:#2a2820;text-transform:uppercase;margin-top:20px;opacity:0;transition:opacity 0.5s ease 1.4s,color 0.3s}
+.secret-overlay.active .secret-close{opacity:1}
+.secret-close:hover{color:#5a554a}
+
+/* AUDIO */
+#audioBtn{
+  position:fixed;bottom:32px;right:40px;
+  z-index:500;
+  background:transparent;border:1px solid var(--dim);
+  color:var(--muted);font-family:'Courier Prime',monospace;
+  font-size:8px;letter-spacing:0.3em;text-transform:uppercase;
+  padding:8px 14px;cursor:none;
+  transition:all 0.3s;
+}
+#audioBtn:hover{color:var(--paper);border-color:var(--accent)}
+#lightsOut{
+  display:none;position:fixed;inset:0;z-index:2000;
+  background:rgba(0,0,0,0);pointer-events:none;
+  transition:background 25s ease;
+  align-items:center;justify-content:center;
+}
+#lightsOut.fading{background:rgba(0,0,0,0.97) !important;pointer-events:all}
+#lightsOutText{
+  font-family:'Playfair Display',serif;font-style:italic;
+  font-size:clamp(18px,3vw,28px);color:#e8e3d9;
+  line-height:2;text-align:center;
+  opacity:0;transition:opacity 6s ease;
+  max-width:480px;padding:40px;
+}
+#lightsOut.fading #lightsOutText{opacity:1 !important;transition-delay:18s !important}
+
+/* LANGUAGE */
+#langScreen{
+  position:fixed;inset:0;z-index:3000;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:48px;
+  transition:opacity 0.8s ease;
+}
+#langScreen.hide{opacity:0;pointer-events:none}
+.lang-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(28px,5vw,48px);
+  font-weight:900;font-style:italic;
+  color:var(--paper);letter-spacing:-0.02em;
+}
+.lang-btns{display:flex;gap:24px}
+.lang-btn{
+  font-size:10px;letter-spacing:0.5em;
+  text-transform:uppercase;color:var(--muted);
+  border:1px solid var(--dim);padding:12px 28px;
+  background:transparent;cursor:none;
+  font-family:'Courier Prime',monospace;
+  transition:all 0.3s;
+}
+.lang-btn:hover{color:var(--paper);border-color:var(--accent)}
+
+#langSwitch{
+  position:fixed;top:24px;right:40px;
+  z-index:500;display:flex;gap:0;
+}
+.ls-btn{
+  font-size:8px;letter-spacing:0.3em;
+  text-transform:uppercase;color:var(--dim);
+  background:transparent;border:none;
+  cursor:none;font-family:'Courier Prime',monospace;
+  padding:4px 8px;transition:color 0.3s;
+}
+.ls-btn.active{color:var(--paper)}
+.ls-btn:hover{color:var(--muted)}
+.ls-sep{font-size:8px;color:var(--dim);line-height:1.8;padding:0 2px}
+
+@media(max-width:700px){
+  .two-col,.book-grid,.game-grid{grid-template-columns:1fr}
+  .gallery{grid-template-columns:repeat(2,1fr)}
+  footer{flex-direction:column;gap:24px;align-items:flex-start}
+  .footer-links{align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<audio id="bgAudio" loop preload="none">
+  <source src="Hozuki_-_oblivion.mp3" type="audio/mpeg">
+</audio>
+<button id="audioBtn">♪ play</button>
+<canvas id="canvas"></canvas>
+<div class="noise"></div>
+<div class="vignette"></div>
+
+<!-- LANG SCREEN -->
+<div id="langScreen">
+  <p class="lang-title">choose your language</p>
+  <div class="lang-btns">
+    <button class="lang-btn" onclick="setLang('en')">english</button>
+    <button class="lang-btn" onclick="setLang('ru')">русский</button>
+  </div>
+</div>
+
+<!-- LANG SWITCHER -->
+<div id="langSwitch">
+  <button class="ls-btn active" id="lsEn" onclick="setLang('en')">en</button>
+  <span class="ls-sep">/</span>
+  <button class="ls-btn" id="lsRu" onclick="setLang('ru')">ru</button>
+</div>
+
+<!-- SECRETS -->
+<div id="secret1" class="secret-overlay">
+  <div class="secret-inner">
+    <p class="secret-text">"you weren't supposed to find this.<br>or maybe you were.<br><br>this was never just a countdown."</p>
+    <p class="secret-close">click anywhere to close</p>
+  </div>
+</div>
+<div id="secret2" class="secret-overlay">
+  <div class="secret-inner">
+    <p class="secret-text">"this was a social experiment.<br><br>you were part of it<br>from the first day.<br><br>thank you for participating."</p>
+    <p class="secret-close">click anywhere to close</p>
+  </div>
+</div>
+<div id="secret3" class="secret-overlay">
+  <div class="secret-inner">
+    <p class="secret-text">"she was never supposed to smile.<br><br>it just happened.<br><br>i left it because correcting it<br>would have been a kind of lie."</p>
+    <p class="secret-close">click anywhere to close</p>
+  </div>
+</div>
+
+<!-- LIGHTS OUT -->
+<div id="lightsOut">
+  <div id="lightsOutText">
+    "the lights went out.<br>but you're still here.<br>that means something."
+  </div>
+</div>
+
+<!-- HERO -->
+<div id="hero">
+  <span class="hero-eyebrow">#till_lights_out — <span id="tEyebrow">something started</span><span id="dot" style="cursor:none;user-select:none;opacity:0.15;">.</span></span>
+  <h1 class="hero-title">not<br><em>a void</em></h1>
+  <span class="hero-sub" id="tHeroSub">a project in progress</span>
+  <div class="hero-divider"></div>
+  <div class="hero-counter">
+    <span class="hero-counter-label" id="tHeroLabel">remaining days</span>
+    <div class="hero-counter-num" id="heroNum">34</div>
+  </div>
+  <span class="scroll-hint" id="tScrollHint">↓ scroll</span>
+</div>
+
+<!-- CHANNEL -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="channel" data-label-ru="канал" data-label="channel" data-num="01"></div>
+  <div class="two-col reveal">
+    <div>
+      <h2 class="big-head" id="tChHead">texts<br>written at<br><em>23:47</em></h2>
+      <p class="body-text" id="tChBody">every night, at the same time, a text appears.<br>no theme. no schedule. just what didn't fit anywhere else.</p>
+      <a href="https://t.me/maybe0x16" target="_blank" class="btn" id="tChBtn">open channel →</a>
+    </div>
+    <div>
+      <div class="excerpt">
+        <p>"я давно перестал понимать, где именно я нахожусь — не в смысле места, а в смысле состояния."</p>
+        <span>— <span id="tChArch">from the archive</span></span>
+      </div>
+      <div class="excerpt">
+        <p>"some things are not meant to be finished. a face half-formed in pencil knows something the completed portrait doesn't."</p>
+        <span>— march 2026</span>
+      </div>
+      <div class="excerpt">
+        <p>"the kindest people eventually go quiet. not because something broke in them — but because they finally understood that openness without selectivity is not generosity."</p>
+        <span>— march 2026</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOK -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="the something" data-label-ru="нечто" data-label="the something" data-num="02"></div>
+  <div class="book-grid reveal">
+    <div class="book-cover">
+      <div class="book-cover-sub" style="opacity:0.3;">soon...</div>
+    </div>
+    <div>
+      <h2 class="big-head" id="tBookHead">100 days.<br><em>something at the end.</em></h2>
+      <p class="body-text" id="tBookBody1">everything written, drawn, and built over the course of the countdown.</p>
+      <p class="body-text" id="tBookBody2">collected. ordered. released on day zero.</p>
+      <div class="meta-table">
+        <div class="meta-row"><span id="tBookStatusL">status</span><span id="tBookStatus">in progress</span></div>
+        <div class="meta-row"><span id="tBookFormatL">format</span><span id="tBookFormat">digital / free</span></div>
+        <div class="meta-row"><span id="tBookReleaseL">release</span><span id="tBookRelease">day 00</span></div>
+        <div class="meta-row"><span id="tBookLangL">language</span><span id="tBookLang">en / ru</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="something else" data-label-ru="ещё кое-что" data-label="something else" data-num="03"></div>
+  <div class="game-grid reveal">
+    <div>
+      <h2 class="big-head" id="tGameHead">coming<br><em>soon.</em></h2>
+      <p class="body-text" id="tGameBody1">isometric. dark. built from scratch.</p>
+      <p class="body-text" id="tGameBody2">you move through a world that doesn't explain itself. enemies with red eyes. no map. no instructions.</p>
+      <p class="body-text" id="tGameBody3">dark. atmospheric. something still unnamed.</p>
+      <div class="tags">
+        <span class="tag">open world</span>
+        <span class="tag">isometric</span>
+        <span class="tag">browser</span>
+        <span class="tag">wip</span>
+      </div>
+      <a href="game.html" class="btn" style="margin-top:24px;" id="tGameBtn">play →</a>
+    </div>
+    <div class="game-screen" id="gameScreen">
+      <canvas id="gameCanvas"></canvas>
+      <div class="game-scanline"></div>
+      <div id="gameBlur" style="position:absolute;inset:0;z-index:3;backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);transition:backdrop-filter 0.4s ease;pointer-events:none;"></div>
+      <div id="gameHint" style="position:absolute;inset:0;z-index:4;display:flex;align-items:center;justify-content:center;pointer-events:none;transition:opacity 0.4s;">
+        <span style="font-size:8px;letter-spacing:0.4em;color:#3a3830;text-transform:uppercase;">not yet</span>
+      </div>
+      <div class="game-label">— preview</div>
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="sketches" data-label-ru="скетчи" data-label="sketches" data-num="04"></div>
+  <div class="gallery reveal">
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+    <div class="gitem"><div class="gitem-inner">soon...</div></div>
+  </div>
+  <p class="gallery-caption" id="tSketchesCaption">hand-drawn. pencil. no reference.</p>
+</div>
+
+<!-- RIDDLES -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="for the attentive" data-label-ru="для внимательных" data-label="for the attentive" data-num="05"></div>
+  <p class="riddle-intro reveal" id="tRiddlesIntro">you've been reading long enough to know something.<br>let's find out how much.</p>
+  <div class="riddle-block reveal">
+    <span class="riddle-num">riddle 01</span>
+    <p class="riddle-q" id="tR1q">the countdown started at 100. but something started before that. what were the first two words posted on this channel?</p>
+    <input class="riddle-input" type="text" placeholder="your answer..." id="r1" autocomplete="off">
+    <div class="riddle-feedback" id="r1f"></div>
+  </div>
+  <div class="riddle-block reveal">
+    <span class="riddle-num">riddle 02</span>
+    <p class="riddle-q" id="tR2q">the first sketch was smiling. the second was not. what changed — in one word?</p>
+    <input class="riddle-input" type="text" placeholder="your answer..." id="r2" autocomplete="off">
+    <div class="riddle-feedback" id="r2f"></div>
+  </div>
+  <div class="riddle-block reveal">
+    <span class="riddle-num">riddle 03</span>
+    <p class="riddle-q" id="tR3q">what does "remaining days" actually count toward? you have all the clues. you've had them from the start.</p>
+    <input class="riddle-input" type="text" placeholder="your answer..." id="r3" autocomplete="off">
+    <div class="riddle-feedback" id="r3f"></div>
+  </div>
+</div>
+
+<!-- ABOUT + STATS -->
+<div class="wrap">
+  <div class="rule t-rule" data-label-en="about" data-label-ru="о проекте" data-label="about" data-num="06"></div>
+  <div class="two-col reveal">
+    <div>
+      <h2 class="big-head" id="tAboutHead">what is<br><em>this.</em></h2>
+      <p class="body-text" id="tAboutBody1">started on day 100. ends on day zero.</p>
+      <p class="body-text" id="tAboutBody2">texts at 23:47. sketches without reference. a game built in the dark. something written between the posts that wasn't supposed to be read yet.</p>
+      <p class="body-text" id="tAboutBody3">no genre. no audience in mind. just a countdown and everything that filled it.</p>
+      <p class="body-text" id="tAboutBody4">what's in between — you've already seen part of it.</p>
+    </div>
+    <div>
+      <div style="margin-bottom:32px;">
+        <p id="tStatsLabel" style="font-size:8px;letter-spacing:0.4em;color:var(--muted);text-transform:uppercase;margin-bottom:16px;">by the numbers</p>
+        <div class="meta-table">
+          <div class="meta-row"><span id="tStatViews">peak views</span><span>60 — 70</span></div>
+          <div class="meta-row"><span id="tStatSubs">subscribers</span><span>7</span></div>
+          <div class="meta-row"><span id="tStatReactions">posts with reactions</span><span>every one</span></div>
+          <div class="meta-row"><span id="tStatNullchat">nullchat messages</span><span>2</span></div>
+          <div class="meta-row"><span id="tStatSketches">sketches drawn</span><span>5+</span></div>
+          <div class="meta-row"><span id="tStatDays">days remaining</span><span id="statsNum">34</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="reveal">
+  <div class="footer-l">
+    <span class="footer-title">till lights out</span>
+    <span class="footer-sub" id="probNothing">probably nothing</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://t.me/maybe0x16" target="_blank" id="tChLink">channel @maybe0x16</a>
+    <a href="https://t.me/eterytyy_blog" target="_blank" id="tPersonalLink">personal @eterytyy_blog</a>
+    <a href="https://t.me/nullchat0x16_bot" target="_blank">nullchat</a>
+    <a href="https://t.me/sentinel0x16_bot" target="_blank">sentinel</a>
+  </div>
+</footer>
+<p class="footer-copy">remaining days: <span id="footerNum">34</span> — <span id="tFooterCopy">day zero is coming</span></p>
+
+<script>
+// language
+const TEXTS = {
+  en: {
+    'hero-counter-label': 'remaining days',
+    'hero-sub': 'or maybe not',
+    'scroll-hint-text': '↓ scroll',
+    'eyebrow': 'something started',
+    'ch-head': 'maybe<br>texts.<br><em>maybe not.</em>',
+    'ch-body': 'something appears here sometimes.<br>or maybe it always does. hard to say.',
+    'ch-btn': 'or maybe don\'t →',
+    'ch-arch': 'or maybe from somewhere else',
+    'book-label': '?',
+    'book-head': '100 days.<br><em>something at the end.</em>',
+    'book-body1': 'maybe everything. maybe nothing. something in between, probably.',
+    'book-body2': 'arrives on day zero. or doesn\'t. we\'ll see.',
+    'book-status-l': 'status',
+    'book-format-l': 'format',
+    'book-release-l': 'release',
+    'book-lang-l': 'language',
+    'book-status': 'unclear',
+    'book-format': 'unknown / maybe free',
+    'book-release': 'day 00. or not.',
+    'book-lang': 'en / ru / ??',
+    'game-label': '??',
+    'game-head': 'maybe<br><em>something.</em>',
+    'game-body1': 'dark. built in secret. or maybe not built at all.',
+    'game-body2': 'you might move through something. or something might move through you.',
+    'game-body3': 'could be a game. could be something else entirely.',
+    'game-btn': 'maybe →',
+    'sketches-label': 'or drawings. or neither.',
+    'sketches-caption': 'hand-drawn. or maybe imagined.',
+    'riddles-label': 'if you\'ve been paying attention',
+    'riddles-intro': 'maybe you know something by now.<br>maybe you don\'t. let\'s find out.',
+    'r1q': 'something started before the countdown. what were the first two words? (or were there any?)',
+    'r2q': 'the first one was smiling. the second wasn\'t. what changed, if anything did?',
+    'r3q': 'what is the countdown for? maybe you know. maybe it doesn\'t matter.',
+    'about-label': 'or not',
+    'about-head': 'maybe<br><em>something.</em>',
+    'about-body1': 'started somewhere. ends somewhere else.',
+    'about-body2': 'things happened in between. some of them might have been intentional.',
+    'about-body3': 'could be a project. could be something that just needed to exist for a while.',
+    'about-body4': 'you\'ve seen part of it, maybe.',
+    'stats-label': 'approximately',
+    'stat-views': 'people who maybe looked',
+    'stat-subs': 'people who stayed',
+    'stat-reactions': 'posts w/ reactions',
+    'stat-nullchat': 'messages from the void',
+    'stat-sketches': 'things drawn',
+    'stat-days': 'days left, probably',
+    'footer-sub': 'probably nothing',
+    'footer-copy': 'day zero is coming. or it isn\'t.',
+    'ch-link': '@maybe0x16',
+    'personal-link': '@eterytyy_blog',
+    'close-secret': 'click anywhere to close',
+  },
+  ru: {
+    'hero-counter-label': 'осталось дней',
+    'hero-sub': 'или нет',
+    'scroll-hint-text': '↓ листай',
+    'eyebrow': 'что-то началось',
+    'ch-head': 'может тексты.<br><em>а может нет.</em>',
+    'ch-body': 'что-то появляется здесь иногда.<br>или всегда. сложно сказать.',
+    'ch-btn': 'а может не надо →',
+    'ch-arch': 'или откуда-то ещё',
+    'book-label': '?',
+    'book-head': '100 дней.<br><em>что-то в конце.</em>',
+    'book-body1': 'может всё. может ничего. скорее что-то посередине.',
+    'book-body2': 'появится в день ноль. или нет. посмотрим.',
+    'book-status-l': 'статус',
+    'book-format-l': 'формат',
+    'book-release-l': 'релиз',
+    'book-lang-l': 'язык',
+    'book-status': 'неясно',
+    'book-format': 'неизвестно / может бесплатно',
+    'book-release': 'день 00. или нет.',
+    'book-lang': 'en / ru / ??',
+    'game-label': '??',
+    'game-head': 'может<br><em>что-то.</em>',
+    'game-body1': 'тёмное. построено в тайне. или вообще не построено.',
+    'game-body2': 'возможно ты будешь двигаться сквозь что-то. или что-то — сквозь тебя.',
+    'game-body3': 'может игра. может что-то совсем другое.',
+    'game-btn': 'может быть →',
+    'sketches-label': 'или рисунки. или ни то ни другое.',
+    'sketches-caption': 'нарисовано от руки. или просто привиделось.',
+    'riddles-label': 'если ты следил',
+    'riddles-intro': 'может ты уже что-то знаешь.<br>а может нет. проверим.',
+    'r1q': 'что-то началось до отсчёта. какими были первые два слова? (или они вообще были?)',
+    'r2q': 'первый улыбался. второй нет. что изменилось, если вообще что-то изменилось?',
+    'r3q': 'для чего этот отсчёт? может ты знаешь. может это не важно.',
+    'about-label': 'или нет',
+    'about-head': 'может<br><em>что-то.</em>',
+    'about-body1': 'началось где-то. заканчивается где-то ещё.',
+    'about-body2': 'между этим кое-что происходило. часть из этого, возможно, была намеренной.',
+    'about-body3': 'может проект. может что-то, чему просто нужно было существовать какое-то время.',
+    'about-body4': 'ты видел часть этого. наверное.',
+    'stats-label': 'приблизительно',
+    'stat-views': 'может смотрели',
+    'stat-subs': 'людей которые остались',
+    'stat-reactions': 'постов с реакциями',
+    'stat-nullchat': 'сообщений из пустоты',
+    'stat-sketches': 'нарисованных штук',
+    'stat-days': 'дней осталось, наверное',
+    'footer-sub': 'наверное ничего',
+    'footer-copy': 'день ноль приближается. или нет.',
+    'ch-link': '@maybe0x16',
+    'personal-link': '@eterytyy_blog',
+    'close-secret': 'нажмите где угодно чтобы закрыть',
+  }
+};
+
+let currentLang = 'en';
+
+function setLang(lang) {
+  currentLang = lang;
+  // hide lang screen
+  const ls = document.getElementById('langScreen');
+  if(ls) { ls.classList.add('hide'); setTimeout(() => { ls.style.display = 'none'; }, 800); }
+  // switcher
+  document.getElementById('lsEn').classList.toggle('active', lang === 'en');
+  document.getElementById('lsRu').classList.toggle('active', lang === 'ru');
+  applyLang(lang);
+}
+
+// restore saved lang
+window.addEventListener('DOMContentLoaded', () => {
+  const savedLang = localStorage.getItem('lang');
+  if(savedLang) {
+    document.getElementById('langScreen').style.display = 'none';
+    applyLang(savedLang);
+  } else {
+    document.getElementById('langScreen').style.display = 'flex';
+  }
+});
+
+function applyLang(lang) {
+  currentLang = lang;
+  const t = TEXTS[lang];
+
+  document.getElementById('lsEn').classList.toggle('active', lang === 'en');
+  document.getElementById('lsRu').classList.toggle('active', lang === 'ru');
+
+  // fade transition
+  document.body.style.transition = 'opacity 0.3s ease';
+  document.body.style.opacity = '0';
+
+  setTimeout(() => {
+    const map = {
+      'tEyebrow': t['eyebrow'],
+      'tHeroSub': t['hero-sub'],
+      'tHeroLabel': t['hero-counter-label'],
+      'tScrollHint': '↓ ' + (lang === 'ru' ? 'листай' : 'scroll'),
+      'tChHead': t['ch-head'],
+      'tChBody': t['ch-body'],
+      'tChBtn': t['ch-btn'],
+      'tChArch': t['ch-arch'],
+      'tBookHead': t['book-head'],
+      'tBookBody1': t['book-body1'],
+      'tBookBody2': t['book-body2'],
+      'tBookStatusL': t['book-status-l'],
+      'tBookFormatL': t['book-format-l'],
+      'tBookReleaseL': t['book-release-l'],
+      'tBookLangL': t['book-lang-l'],
+      'tBookStatus': t['book-status'],
+      'tBookFormat': t['book-format'],
+      'tBookRelease': t['book-release'],
+      'tBookLang': t['book-lang'],
+      'tGameHead': t['game-head'],
+      'tGameBody1': t['game-body1'],
+      'tGameBody2': t['game-body2'],
+      'tGameBody3': t['game-body3'],
+      'tGameBtn': t['game-btn'],
+      'tSketchesCaption': t['sketches-caption'],
+      'tRiddlesIntro': t['riddles-intro'],
+      'tR1q': t['r1q'],
+      'tR2q': t['r2q'],
+      'tR3q': t['r3q'],
+      'tAboutHead': t['about-head'],
+      'tAboutBody1': t['about-body1'],
+      'tAboutBody2': t['about-body2'],
+      'tAboutBody3': t['about-body3'],
+      'tAboutBody4': t['about-body4'],
+      'tStatsLabel': t['stats-label'],
+      'tStatViews': t['stat-views'],
+      'tStatSubs': t['stat-subs'],
+      'tStatReactions': t['stat-reactions'],
+      'tStatNullchat': t['stat-nullchat'],
+      'tStatSketches': t['stat-sketches'],
+      'tStatDays': t['stat-days'],
+      'probNothing': t['footer-sub'],
+      'tFooterCopy': t['footer-copy'],
+      'tChLink': t['ch-link'],
+      'tPersonalLink': t['personal-link'],
+    };
+
+    Object.entries(map).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if(el && val) el.innerHTML = val;
+    });
+
+    // rule labels
+    document.querySelectorAll('.t-rule').forEach(el => {
+      el.setAttribute('data-label', lang === 'ru' ? el.getAttribute('data-label-ru') : el.getAttribute('data-label-en'));
+    });
+
+    // secrets close
+    document.querySelectorAll('.secret-close').forEach(el => {
+      el.textContent = t['close-secret'];
+    });
+
+    document.body.style.opacity = '1';
+    localStorage.setItem('lang', lang);
+  }, 300);
+}
+
+function setLang(lang) {
+  const ls = document.getElementById('langScreen');
+  ls.classList.add('hide');
+  setTimeout(() => { ls.style.display = 'none'; }, 800);
+  applyLang(lang);
+}
+
+// audio
+const audio = document.getElementById('bgAudio');
+const audioBtn = document.getElementById('audioBtn');
+let playing = false;
+
+audioBtn.addEventListener('click', () => {
+  if(playing) {
+    audio.pause();
+    audioBtn.textContent = '♪ play';
+    playing = false;
+  } else {
+    audio.volume = 0;
+    audio.play();
+    audioBtn.textContent = '♪ stop';
+    playing = true;
+    // fade in
+    let vol = 0;
+    const fadeIn = setInterval(() => {
+      vol = Math.min(vol + 0.02, 0.4);
+      audio.volume = vol;
+      if(vol >= 0.4) clearInterval(fadeIn);
+    }, 50);
+  }
+});
+
+// cursor
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top = e.clientY + 'px';
+});
+
+// bg particles
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+class P {
+  constructor(){ this.reset(true); }
+  reset(init){
+    this.x = Math.random()*canvas.width;
+    this.y = Math.random()*canvas.height;
+    this.r = Math.random()*1+0.2;
+    this.vx = (Math.random()-0.5)*0.1;
+    this.vy = (Math.random()-0.5)*0.1;
+    this.a = Math.random()*0.3+0.04;
+    this.life = Math.random()*300+150;
+    this.maxLife = this.life;
+  }
+  tick(){ this.x+=this.vx; this.y+=this.vy; this.life--; if(this.life<=0) this.reset(false); }
+  draw(){
+    ctx.globalAlpha = this.a*(this.life/this.maxLife);
+    ctx.fillStyle='#e8e3d9';
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
+  }
+}
+const ps = Array.from({length:200},()=>new P());
+function bgLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ps.forEach(p=>{p.tick();p.draw();});
+  ctx.globalAlpha=1;
+  requestAnimationFrame(bgLoop);
+}
+bgLoop();
+
+// game preview
+const gc = document.getElementById('gameCanvas');
+const gx = gc.getContext('2d');
+function resizeGc(){ const r=gc.parentElement.getBoundingClientRect(); gc.width=r.width; gc.height=r.height; }
+resizeGc();
+window.addEventListener('resize', resizeGc);
+
+let gt=0;
+const TW=20,TH=10,GRID=11;
+function iso(c,r){ return {x:gc.width/2+(c-r)*TW/2, y:gc.height/2+(c+r)*TH/2-100}; }
+
+const MAP=[
+  [0,0,1,1,1,1,1,0,0,0,0],
+  [0,1,1,1,1,1,1,1,0,0,0],
+  [0,1,1,0,0,1,1,1,1,0,0],
+  [1,1,1,0,0,1,1,1,1,1,0],
+  [1,1,1,1,1,1,0,0,1,1,0],
+  [1,1,1,1,1,1,1,0,0,1,1],
+  [0,1,1,1,0,1,1,1,1,1,1],
+  [0,0,1,1,1,1,1,1,1,1,0],
+  [0,0,0,1,1,1,1,1,1,0,0],
+  [0,0,0,0,1,1,1,1,0,0,0],
+  [0,0,0,0,0,1,1,0,0,0,0],
+];
+
+function tile(c,r,light){
+  const {x,y}=iso(c,r);
+  gx.globalAlpha=light;
+  gx.beginPath();
+  gx.moveTo(x,y); gx.lineTo(x+TW/2,y+TH/2);
+  gx.lineTo(x,y+TH); gx.lineTo(x-TW/2,y+TH/2);
+  gx.closePath();
+  gx.fillStyle='rgba(14,12,28,1)'; gx.fill();
+  gx.strokeStyle=`rgba(40,36,70,${light*0.8})`; gx.lineWidth=0.4; gx.stroke();
+  if(light>0.15){
+    gx.globalAlpha=light*0.15; gx.strokeStyle='rgba(100,90,160,1)'; gx.lineWidth=0.3;
+    gx.beginPath(); gx.moveTo(x,y+TH*0.5); gx.lineTo(x+TW*0.25,y+TH*0.25); gx.stroke();
+  }
+}
+
+const gParticles=Array.from({length:30},()=>({c:Math.random()*GRID,r:Math.random()*GRID,life:Math.random()*100,maxLife:100+Math.random()*100,size:Math.random()*1+0.3}));
+const enemies=[{c:2,r:2,hp:0.6},{c:8,r:3,hp:0.8},{c:3,r:7,hp:1},{c:7,r:8,hp:0.4}];
+let pcol=5,prow=5,moveTimer=0;
+
+function gameLoop(){
+  gx.clearRect(0,0,gc.width,gc.height);
+  gx.fillStyle='#03030a'; gx.fillRect(0,0,gc.width,gc.height);
+
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    if(!MAP[r]||!MAP[r][c]) continue;
+    const d=Math.sqrt((c-pcol)**2+(r-prow)**2);
+    tile(c,r,Math.max(0.03,0.7-d*0.09));
+  }
+
+  gParticles.forEach(p=>{
+    p.life++;
+    if(p.life>p.maxLife){ p.c=Math.random()*GRID; p.r=Math.random()*GRID; p.life=0; p.maxLife=100+Math.random()*100; }
+    if(MAP[Math.floor(p.r)]&&MAP[Math.floor(p.r)][Math.floor(p.c)]){
+      const {x,y}=iso(p.c,p.r);
+      gx.globalAlpha=Math.sin((p.life/p.maxLife)*Math.PI)*0.2;
+      gx.fillStyle='#8080ff';
+      gx.beginPath(); gx.arc(x,y-4,p.size,0,Math.PI*2); gx.fill();
+    }
+  });
+
+  moveTimer++;
+  if(moveTimer>80){
+    const nc=pcol+(Math.random()>0.5?1:-1);
+    const nr=prow+(Math.random()>0.5?1:-1);
+    if(nc>=0&&nc<GRID&&nr>=0&&nr<GRID&&MAP[nr]&&MAP[nr][nc]){ pcol=nc; prow=nr; }
+    moveTimer=0;
+  }
+
+  const pp=iso(pcol,prow);
+  gx.globalAlpha=1;
+  const pulse=0.6+0.4*Math.sin(gt*0.04);
+  const grad=gx.createRadialGradient(pp.x,pp.y-8,0,pp.x,pp.y-8,18);
+  grad.addColorStop(0,`rgba(80,100,200,${pulse*0.3})`); grad.addColorStop(1,'rgba(0,0,0,0)');
+  gx.fillStyle=grad; gx.beginPath(); gx.arc(pp.x,pp.y-8,18,0,Math.PI*2); gx.fill();
+  gx.globalAlpha=1;
+  gx.fillStyle=`rgba(60,70,140,${pulse})`; gx.beginPath(); gx.ellipse(pp.x,pp.y-8,4,8,0,0,Math.PI*2); gx.fill();
+  gx.fillStyle=`rgba(160,180,255,${pulse})`; gx.beginPath(); gx.arc(pp.x,pp.y-15,1.8,0,Math.PI*2); gx.fill();
+  gx.globalAlpha=0.3; gx.fillStyle='rgba(0,0,0,0.8)'; gx.beginPath(); gx.ellipse(pp.x,pp.y,5,2,0,0,Math.PI*2); gx.fill();
+
+  enemies.forEach(e=>{
+    if(!MAP[Math.floor(e.r)]||!MAP[Math.floor(e.r)][Math.floor(e.c)]) return;
+    const ep=iso(e.c,e.r);
+    const dist=Math.sqrt((e.c-pcol)**2+(e.r-prow)**2);
+    if(dist>5) return;
+    const ep2=0.4+0.6*Math.sin(gt*0.06+e.c*1.5);
+    const egrad=gx.createRadialGradient(ep.x,ep.y-8,0,ep.x,ep.y-8,14);
+    egrad.addColorStop(0,`rgba(180,20,20,${ep2*0.25})`); egrad.addColorStop(1,'rgba(0,0,0,0)');
+    gx.fillStyle=egrad; gx.beginPath(); gx.arc(ep.x,ep.y-8,14,0,Math.PI*2); gx.fill();
+    gx.globalAlpha=1;
+    gx.fillStyle='rgba(20,6,6,0.9)'; gx.beginPath(); gx.ellipse(ep.x,ep.y-8,4,8,0,0,Math.PI*2); gx.fill();
+    gx.fillStyle=`rgba(220,40,40,${ep2})`;
+    [-2.5,2.5].forEach(ox=>{ gx.beginPath(); gx.arc(ep.x+ox,ep.y-14,1.2,0,Math.PI*2); gx.fill(); });
+    gx.globalAlpha=0.5;
+    gx.fillStyle='rgba(100,10,10,0.6)'; gx.fillRect(ep.x-10,ep.y-20,20,1.5);
+    gx.fillStyle='rgba(200,30,30,0.8)'; gx.fillRect(ep.x-10,ep.y-20,20*e.hp,1.5);
+  });
+
+  const lp=iso(8,5);
+  if(MAP[5]&&MAP[5][8]){
+    const lpulse=0.5+0.5*Math.sin(gt*0.08);
+    gx.globalAlpha=lpulse*0.8; gx.fillStyle='rgba(200,200,100,1)';
+    gx.beginPath(); gx.moveTo(lp.x,lp.y-10); gx.lineTo(lp.x+3,lp.y-6); gx.lineTo(lp.x,lp.y-2); gx.lineTo(lp.x-3,lp.y-6); gx.closePath(); gx.fill();
+  }
+
+  gt++;
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// game blur
+const gameScreen=document.getElementById('gameScreen');
+const gameBlur=document.getElementById('gameBlur');
+const gameHint=document.getElementById('gameHint');
+let mouseX=-999,mouseY=-999;
+
+function updateBlur(){
+  const rect=gameScreen.getBoundingClientRect();
+  const clampX=Math.max(rect.left,Math.min(rect.right,mouseX));
+  const clampY=Math.max(rect.top,Math.min(rect.bottom,mouseY));
+  const dist=Math.sqrt((mouseX-clampX)**2+(mouseY-clampY)**2);
+  const proximity=Math.max(0,1-dist/120);
+  const blurVal=22-proximity*18;
+  gameBlur.style.backdropFilter=`blur(${blurVal}px)`;
+  gameBlur.style.webkitBackdropFilter=`blur(${blurVal}px)`;
+  gameHint.style.opacity=proximity>0.5?0:1;
+}
+
+document.addEventListener('mousemove',e=>{ mouseX=e.clientX; mouseY=e.clientY; updateBlur(); });
+document.addEventListener('touchmove',e=>{ const t=e.touches[0]; mouseX=t.clientX; mouseY=t.clientY; updateBlur(); },{passive:true});
+document.addEventListener('touchend',()=>{ mouseX=-999; mouseY=-999; gameBlur.style.backdropFilter='blur(22px)'; gameHint.style.opacity=1; });
+
+// countdown
+const endDate=new Date('2026-04-25T23:47:00');
+function updateCountdown(){
+  const diff=Math.max(0,Math.ceil((endDate-new Date())/(1000*60*60*24)));
+  document.getElementById('heroNum').textContent=diff;
+  document.getElementById('footerNum').textContent=diff;
+  const s=document.getElementById('statsNum');
+  if(s) s.textContent=diff;
+}
+updateCountdown();
+setInterval(updateCountdown,60000);
+
+// scroll reveal
+const reveals=document.querySelectorAll('.reveal');
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target);} });
+},{threshold:0.1});
+reveals.forEach(r=>obs.observe(r));
+
+// secrets
+function showSecret(id){
+  const el=document.getElementById(id);
+  const textEl=el.querySelector('.secret-text');
+  el.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.classList.add('active');
+    setTimeout(()=>textEl.classList.add('glitching'),300);
+  }));
+  el.addEventListener('click',()=>{
+    el.classList.remove('active');
+    textEl.classList.remove('glitching');
+    setTimeout(()=>{ el.style.display='none'; },600);
+  },{once:true});
+}
+
+// secret 1 — счётчик 5 раз
+let clickCount=0,clickTimer;
+document.getElementById('heroNum').addEventListener('click',()=>{
+  clickCount++;
+  clearTimeout(clickTimer);
+  clickTimer=setTimeout(()=>{ clickCount=0; },1500);
+  if(clickCount>=5){ clickCount=0; showSecret('secret1'); }
+});
+
+// secret 2 — probably nothing 3 раза
+let pnCount=0,pnTimer;
+document.getElementById('probNothing').addEventListener('click',()=>{
+  pnCount++;
+  clearTimeout(pnTimer);
+  pnTimer=setTimeout(()=>{ pnCount=0; },1200);
+  if(pnCount>=3){ pnCount=0; showSecret('secret2'); }
+});
+
+// secret 3 — точка после "something started"
+document.getElementById('dot').addEventListener('click',()=>showSecret('secret3'));
+
+// riddles
+const riddles=[
+  {id:'r1',answers:['something started'],hint:'it was the first two words. check the very beginning.'},
+  {id:'r2',answers:['weather','mood','expression','interior'],hint:'we contain more weather than we are willing to admit.'},
+  {id:'r3',answers:['book','game','release','day zero','the book','the game','book and game'],hint:'it was never about the end. it was about what starts there.'},
+];
+riddles.forEach(({id,answers,hint})=>{
+  const input=document.getElementById(id);
+  const fb=document.getElementById(id+'f');
+  input.addEventListener('keydown',e=>{
+    if(e.key!=='Enter'||!input.value.trim()) return;
+    const val=input.value.trim().toLowerCase();
+    if(answers.some(a=>val.includes(a))){
+      fb.textContent='✓ correct.'; fb.className='riddle-feedback show';
+    } else {
+      fb.textContent=hint; fb.className='riddle-feedback wrong';
+      setTimeout(()=>fb.className='riddle-feedback',3500);
+    }
+  });
+});
+
+// lights out — 3 минуты
+setTimeout(()=>{
+  const lo=document.getElementById('lightsOut');
+  lo.style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>lo.classList.add('fading')));
+  lo.addEventListener('click',()=>{
+    lo.classList.remove('fading');
+    setTimeout(()=>{ lo.style.display='none'; },2000);
+  });
+},3*60*1000);
+</script>
+<script data-goatcounter="https://eterytyy.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
